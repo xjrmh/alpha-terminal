@@ -1,0 +1,338 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Light theme (default) ── */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-surface: #f0f1f3;
+  --bg-hover: #e9ecef;
+  --border-color: #dee2e6;
+  --text-primary: #1a1a2e;
+  --text-secondary: #495057;
+  --text-muted: #868e96;
+  --green-accent: #059669;
+  --green-accent-hover: #047857;
+  --green-accent-dim: #d1fae5;
+  --amber-accent: #d97706;
+  --red-accent: #dc2626;
+  --skeleton-base: #e9ecef;
+  --skeleton-shimmer: rgba(5, 150, 105, 0.08);
+  --scan-line: rgba(5, 150, 105, 0.06);
+}
+
+/* ── Dark theme ── */
+.dark {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #0f0f0f;
+  --bg-surface: #161616;
+  --bg-hover: #1e1e1e;
+  --border-color: #262626;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --green-accent: #00ff88;
+  --green-accent-hover: #00e07a;
+  --green-accent-dim: #00ff8815;
+  --amber-accent: #ffaa00;
+  --red-accent: #ff4444;
+  --skeleton-base: #161616;
+  --skeleton-shimmer: rgba(0, 255, 136, 0.05);
+  --scan-line: rgba(0, 255, 136, 0.08);
+}
+
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-hover: var(--bg-hover);
+  --color-border: var(--border-color);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-green-accent: var(--green-accent);
+  --color-green-accent-hover: var(--green-accent-hover);
+  --color-green-dim: var(--green-accent-dim);
+  --color-amber-accent: var(--amber-accent);
+  --color-red-accent: var(--red-accent);
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+/* ── Base ── */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ── Select reset ── */
+select.appearance-none::-webkit-inner-spin-button,
+select.appearance-none::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+select.appearance-none {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════
+   Required CSS Classes
+   ═══════════════════════════════════════ */
+
+/* 1. btn-run — green outlined terminal button */
+.btn-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--green-accent);
+  color: var(--green-accent);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-run:hover:not(:disabled) {
+  background: var(--green-accent);
+  color: var(--bg-primary);
+}
+.btn-run:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 2. btn-lang — language toggle button */
+.btn-lang {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--text-muted);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-lang:hover {
+  border-color: var(--green-accent);
+  color: var(--green-accent);
+}
+
+/* 3. nav-item + nav-item-active — sidebar nav links */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-left: 2px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.nav-item:hover {
+  color: var(--green-accent);
+  background: var(--bg-surface);
+}
+.nav-item-active {
+  color: var(--green-accent);
+  background: var(--bg-surface);
+  border-left-color: var(--green-accent);
+}
+
+/* 4. module-output — markdown rendering container */
+.module-output {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+.module-output h1,
+.module-output h2,
+.module-output h3,
+.module-output h4 {
+  color: var(--green-accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.module-output h1 { font-size: 1.25rem; }
+.module-output h2 { font-size: 1.1rem; }
+.module-output h3 { font-size: 0.95rem; }
+.module-output p {
+  margin-bottom: 0.75em;
+}
+.module-output strong {
+  color: var(--green-accent);
+}
+.module-output a {
+  color: var(--green-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.module-output a:hover {
+  color: var(--green-accent-hover);
+}
+.module-output code {
+  color: var(--amber-accent);
+  background: var(--bg-surface);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+.module-output pre {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.module-output pre code {
+  background: none;
+  padding: 0;
+}
+.module-output ul,
+.module-output ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+.module-output li {
+  margin-bottom: 0.25em;
+}
+.module-output table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.8rem;
+}
+.module-output th {
+  background: var(--bg-surface);
+  color: var(--green-accent);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+}
+.module-output td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+}
+.module-output hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1.5em 0;
+}
+.module-output blockquote {
+  border-left: 3px solid var(--green-accent);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  margin: 1em 0;
+}
+
+/* 5. terminal-cursor — blinking green cursor */
+.terminal-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  background: var(--green-accent);
+  margin-left: 0.2em;
+  vertical-align: text-bottom;
+  animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  50% { opacity: 0; }
+}
+
+/* 6. terminal-scan + ::after — scan line animation */
+.terminal-scan {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.terminal-scan::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--scan-line);
+  box-shadow: 0 0 8px 2px var(--scan-line);
+  animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+  0% { top: -1px; }
+  100% { top: 100%; }
+}
+
+/* 7. skeleton-line — shimmer loading skeleton */
+.skeleton-line {
+  height: 0.75rem;
+  border-radius: 3px;
+  background: var(--skeleton-base);
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shimmer),
+    transparent
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 8. cite-link — inline [1] citation superscript */
+.cite-link {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--green-accent);
+  cursor: pointer;
+  vertical-align: super;
+  line-height: 0;
+  text-decoration: none;
+  font-weight: 600;
+}
+.cite-link:hover {
+  color: var(--amber-accent);
+  text-decoration: underline;
+}
