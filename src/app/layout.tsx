@@ -17,6 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Alpha Terminal",
   description: "AI-Powered Financial Intelligence Terminal",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 // Inline script to prevent flash of wrong theme on load
