@@ -5,7 +5,7 @@ import { useLanguage } from "@/lib/i18n/context";
 import { useModel } from "@/lib/model/context";
 import { useAnalysis } from "@/lib/analysis/context";
 import { useExpertMode } from "@/lib/expert/context";
-import { isQuantStrategyId } from "@/lib/modules";
+import { isQuantStrategyId, isWatchlistModuleId } from "@/lib/modules";
 import {
   getNarrativeRunKey,
   getNarrativeRunState,
@@ -15,6 +15,7 @@ import {
 import { MarkdownRenderer } from "./markdown-renderer";
 import { SkeletonLoader } from "./skeleton-loader";
 import { QuantModuleRunner } from "./quant-module-runner";
+import { WatchlistModuleRunner } from "./watchlist-module-runner";
 import type { ModuleId, NarrativeModuleId } from "@/types";
 
 interface ModuleRunnerProps {
@@ -200,6 +201,10 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
 export function ModuleRunner({ moduleId }: ModuleRunnerProps) {
   if (isQuantStrategyId(moduleId)) {
     return <QuantModuleRunner strategyId={moduleId} />;
+  }
+
+  if (isWatchlistModuleId(moduleId)) {
+    return <WatchlistModuleRunner />;
   }
 
   return <NarrativeModuleRunner moduleId={moduleId} />;

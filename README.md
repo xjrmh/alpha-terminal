@@ -23,6 +23,7 @@ npm run dev
 ## Features
 
 - 10 AI-powered financial analysis modules
+- 1 deterministic Watchlist activity scanner (`1D` / `1W` / `1M`)
 - 4 deterministic quant strategy modules with signal + backtest output
 - Bilingual (English / Chinese)
 - Light / Dark / Auto theme
@@ -42,10 +43,11 @@ npm run dev
 8. **Institutional Flow** — 13F hedge fund tracking
 9. **Portfolio Hedging** — Hedge recommendations with options/ETFs
 10. **Weekly Briefing** — Executive summary of the week
-11. **Quant Dual Momentum** — Monthly ETF trend + relative momentum allocation
-12. **Quant Multifactor Stocks** — Value/Quality/Momentum stock basket
-13. **Quant Low Beta + Quality** — Defensive quality equity sleeve
-14. **Quant Vol Target Overlay** — Weekly risk-scaling overlay
+11. **Watchlist** — Deterministic top-activity stocks ranked by movement, volume shift, and volatility regime (`1D` / `1W` / `1M`)
+12. **Quant Dual Momentum** — Monthly ETF trend + relative momentum allocation
+13. **Quant Multifactor Stocks** — Value/Quality/Momentum stock basket
+14. **Quant Low Beta + Quality** — Defensive quality equity sleeve
+15. **Quant Vol Target Overlay** — Weekly risk-scaling overlay
 
 ## Deploy
 

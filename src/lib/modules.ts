@@ -1,5 +1,5 @@
 import { isQuantModulesEnabled } from "@/lib/features";
-import type { ModuleInfo, QuantStrategyId } from "@/types";
+import type { ModuleInfo, QuantStrategyId, WatchlistModuleId } from "@/types";
 
 export const NARRATIVE_MODULES: ModuleInfo[] = [
   {
@@ -72,6 +72,13 @@ export const NARRATIVE_MODULES: ModuleInfo[] = [
     nameKey: "weekly-briefing",
     kind: "narrative",
   },
+  {
+    id: "watchlist",
+    slug: "watchlist",
+    icon: "◍",
+    nameKey: "watchlist",
+    kind: "watchlist",
+  },
 ];
 
 export const QUANT_MODULES: ModuleInfo[] = [
@@ -115,4 +122,8 @@ const quantSet = new Set<QuantStrategyId>(
 
 export function isQuantStrategyId(id: string): id is QuantStrategyId {
   return quantSet.has(id as QuantStrategyId);
+}
+
+export function isWatchlistModuleId(id: string): id is WatchlistModuleId {
+  return id === "watchlist";
 }

@@ -363,6 +363,7 @@ select.appearance-none {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  z-index: 20;
 }
 .terminal-scan::after {
   content: "";
@@ -373,6 +374,7 @@ select.appearance-none {
   background: var(--scan-line);
   box-shadow: 0 0 8px 2px var(--scan-line);
   animation: scanline 8s linear infinite;
+  z-index: 20;
 }
 
 @keyframes scanline {
@@ -387,6 +389,7 @@ select.appearance-none {
   background: var(--skeleton-base);
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 .skeleton-line::after {
   content: "";
@@ -399,6 +402,7 @@ select.appearance-none {
     transparent
   );
   animation: shimmer 1.5s ease-in-out infinite;
+  z-index: 1;
 }
 
 @keyframes shimmer {

@@ -18,9 +18,11 @@ export type QuantStrategyId =
   | "quant-low-beta-quality"
   | "quant-volatility-target-overlay";
 
-export type ModuleId = NarrativeModuleId | QuantStrategyId;
+export type WatchlistModuleId = "watchlist";
 
-export type ModuleKind = "narrative" | "quant";
+export type ModuleId = NarrativeModuleId | QuantStrategyId | WatchlistModuleId;
+
+export type ModuleKind = "narrative" | "quant" | "watchlist";
 
 export interface ModuleInfo {
   id: ModuleId;
@@ -36,6 +38,48 @@ export interface AnalyzeRequest {
   modelId: string;
   providerApiKey?: string;
   expertMode?: boolean;
+}
+
+export type WatchlistTimeRange = "1D" | "1W" | "1M";
+
+export interface WatchlistScanRequest {
+  timeRange: WatchlistTimeRange;
+  asOfDate?: string;
+  limit?: number;
+}
+
+export interface WatchlistItem {
+  ticker: string;
+  name: string;
+  sector: string;
+  close: number;
+  returnPct: number;
+  volumeShift: number;
+  volShift: number;
+  activityScore: number;
+  direction: "UP" | "DOWN";
+  signals: string[];
+}
+
+export interface WatchlistScanResponse {
+  asOfDate: string;
+  timeRange: WatchlistTimeRange;
+  requestedLimit: number;
+  effectiveLimit: number;
+  universeVersion: string;
+  items: WatchlistItem[];
+  diagnostics: {
+    universeSize: number;
+    eligibleCount: number;
+    excludedCount: number;
+    reasons: Record<string, number>;
+    factorWeights: {
+      movement: number;
+      volumeShift: number;
+      volShift: number;
+    };
+  };
+  sources: string[];
 }
 
 export type LookbackMode = "fixed_years" | "since_inception";
