@@ -34,6 +34,7 @@ export interface AnalyzeRequest {
   moduleId: NarrativeModuleId;
   language: Language;
   modelId: string;
+  providerApiKey?: string;
 }
 
 export type LookbackMode = "fixed_years" | "since_inception";

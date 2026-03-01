@@ -22,7 +22,7 @@ interface ModuleRunnerProps {
 
 function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
   const { lang, t } = useLanguage();
-  const { modelId } = useModel();
+  const { modelId, getProviderApiKeyForModel, setApiKeyError } = useModel();
   const { registerOnRun, setIsLoading } = useAnalysis();
   const runKey = useMemo(
     () =>
@@ -37,16 +37,18 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
   const showScan = !runState.completion && !runState.error;
 
   const handleRun = useCallback(() => {
+    setApiKeyError(null);
     void runNarrativeAnalysis({
       moduleId,
       language: lang,
       modelId,
+      providerApiKey: getProviderApiKeyForModel(modelId),
     });
-  }, [moduleId, lang, modelId]);
+  }, [moduleId, lang, modelId, getProviderApiKeyForModel, setApiKeyError]);
 
   useEffect(() => {
-    registerOnRun(handleRun);
-    return () => registerOnRun(null);
+    registerOnRun(handleRun, { requiresModelCredentials: true });
+    return () => registerOnRun(null, { requiresModelCredentials: true });
   }, [handleRun, registerOnRun]);
 
   useEffect(() => {
@@ -56,6 +58,13 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
   useEffect(() => {
     setIsLoading(runState.isLoading);
   }, [runState.isLoading, setIsLoading]);
+
+  useEffect(() => {
+    if (!runState.error) return;
+    if (/api key|unauthorized|authentication|invalid key|permission/i.test(runState.error)) {
+      setApiKeyError(runState.error);
+    }
+  }, [runState.error, setApiKeyError]);
 
   return (
     <div className="flex flex-col h-full">

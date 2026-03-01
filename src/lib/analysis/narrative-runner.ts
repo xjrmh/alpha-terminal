@@ -18,6 +18,7 @@ interface RunNarrativeParams {
   moduleId: NarrativeModuleId;
   language: Language;
   modelId: string;
+  providerApiKey?: string;
 }
 
 type NarrativeListener = (state: NarrativeRunState) => void;
@@ -45,6 +46,20 @@ function defaultState(): NarrativeRunState {
 
 function safeNowIso(): string {
   return new Date().toISOString();
+}
+
+async function readErrorMessage(res: Response): Promise<string> {
+  const text = await res.text();
+  if (!text) return `HTTP ${res.status}`;
+
+  try {
+    const parsed = JSON.parse(text) as { error?: string };
+    if (parsed?.error) return parsed.error;
+  } catch {
+    // ignore json parse errors
+  }
+
+  return text;
 }
 
 function getRunToken(key: string): number {
@@ -181,8 +196,7 @@ export async function runNarrativeAnalysis(
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `HTTP ${res.status}`);
+      throw new Error(await readErrorMessage(res));
     }
 
     const reader = res.body?.getReader();

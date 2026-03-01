@@ -80,8 +80,8 @@ export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
   ]);
 
   useEffect(() => {
-    registerOnRun(handleRun);
-    return () => registerOnRun(null);
+    registerOnRun(handleRun, { requiresModelCredentials: false });
+    return () => registerOnRun(null, { requiresModelCredentials: false });
   }, [handleRun, registerOnRun]);
 
   useEffect(() => {

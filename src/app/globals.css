@@ -160,6 +160,44 @@ select.appearance-none {
   padding-right: 1.15rem;
 }
 
+.api-key-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+  backdrop-filter: blur(1.5px);
+}
+
+.api-key-modal-panel {
+  width: min(28rem, 92vw);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 1rem;
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--bg-primary) 70%, transparent);
+}
+
+.api-key-modal-input {
+  width: 100%;
+  min-height: 2rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.45rem 0.6rem;
+  outline: none;
+}
+.api-key-modal-input:focus {
+  border-color: var(--green-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-accent) 65%, transparent);
+}
+
 /* 3. nav-item + nav-item-active — sidebar nav links */
 .nav-item {
   display: flex;

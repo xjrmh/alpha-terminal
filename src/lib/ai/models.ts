@@ -30,3 +30,18 @@ export const MODELS: ModelConfig[] = [
 ];
 
 export const DEFAULT_MODEL = MODELS[0];
+
+export type ModelProvider = ModelConfig["provider"];
+export type ExternalModelProvider = Exclude<ModelProvider, "openai">;
+
+export function getModelConfig(modelId: string): ModelConfig | undefined {
+  return MODELS.find((model) => model.id === modelId);
+}
+
+export function getModelProvider(modelId: string): ModelProvider {
+  return getModelConfig(modelId)?.provider ?? "openai";
+}
+
+export function isChatGptModel(modelId: string): boolean {
+  return getModelProvider(modelId) === "openai";
+}
