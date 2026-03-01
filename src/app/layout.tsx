@@ -4,6 +4,8 @@ import { ThemeProvider } from "@/lib/theme/context";
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ModelProvider } from "@/lib/model/context";
 import { AnalysisProvider } from "@/lib/analysis/context";
+import { ExpertModeProvider } from "@/lib/expert/context";
+import { QuantSettingsProvider } from "@/lib/quant/settings-context";
 import { Sidebar } from "@/components/sidebar";
 import { TerminalHeader } from "@/components/terminal-header";
 import "./globals.css";
@@ -44,15 +46,19 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <ModelProvider>
-              <AnalysisProvider>
-                <div className="flex h-screen overflow-hidden">
-                  <Sidebar />
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    <TerminalHeader />
-                    <main className="flex-1 overflow-hidden">{children}</main>
-                  </div>
-                </div>
-              </AnalysisProvider>
+              <ExpertModeProvider>
+                <QuantSettingsProvider>
+                  <AnalysisProvider>
+                    <div className="flex h-screen overflow-hidden">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <TerminalHeader />
+                        <main className="flex-1 overflow-hidden">{children}</main>
+                      </div>
+                    </div>
+                  </AnalysisProvider>
+                </QuantSettingsProvider>
+              </ExpertModeProvider>
             </ModelProvider>
           </LanguageProvider>
         </ThemeProvider>

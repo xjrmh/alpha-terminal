@@ -21,7 +21,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      className="btn-lang"
+      className="btn-lang btn-top"
       onClick={cycleMode}
       title={`${t.theme}: ${labels[mode]}`}
     >

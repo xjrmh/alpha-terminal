@@ -6,7 +6,7 @@ export function LangToggle() {
   const { lang, toggleLang } = useLanguage();
 
   return (
-    <button className="btn-lang" onClick={toggleLang}>
+    <button className="btn-lang btn-top" onClick={toggleLang}>
       {lang === "en" ? "EN → 中" : "中 → EN"}
     </button>
   );

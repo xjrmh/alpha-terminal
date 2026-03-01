@@ -1,5 +1,5 @@
 import type { Language } from "@/lib/i18n/types";
-import type { ModuleId } from "@/types";
+import type { NarrativeModuleId } from "@/types";
 
 import { getMacroLandscapePrompt } from "./macro-landscape";
 import { getInsiderActivityPrompt } from "./insider-activity";
@@ -12,7 +12,7 @@ import { getInstitutionalFlowPrompt } from "./institutional-flow";
 import { getPortfolioHedgingPrompt } from "./portfolio-hedging";
 import { getWeeklyBriefingPrompt } from "./weekly-briefing";
 
-const promptRegistry: Record<ModuleId, (lang: Language) => string> = {
+const promptRegistry: Record<NarrativeModuleId, (lang: Language) => string> = {
   "macro-landscape": getMacroLandscapePrompt,
   "insider-activity": getInsiderActivityPrompt,
   "short-squeeze": getShortSqueezePrompt,
@@ -25,7 +25,7 @@ const promptRegistry: Record<ModuleId, (lang: Language) => string> = {
   "weekly-briefing": getWeeklyBriefingPrompt,
 };
 
-export function getSystemPrompt(moduleId: ModuleId, lang: Language): string {
+export function getSystemPrompt(moduleId: NarrativeModuleId, lang: Language): string {
   const promptFn = promptRegistry[moduleId];
   if (!promptFn) throw new Error(`Unknown module: ${moduleId}`);
   return promptFn(lang);

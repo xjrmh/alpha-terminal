@@ -38,15 +38,10 @@ function getSystemTheme(): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("auto");
-  const [systemTheme, setSystemTheme] = useState<"light" | "dark">("dark");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setModeState(getStoredMode());
-    setSystemTheme(getSystemTheme());
-    setMounted(true);
-  }, []);
+  const [mode, setModeState] = useState<ThemeMode>(() => getStoredMode());
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(() =>
+    getSystemTheme()
+  );
 
   // Listen for system theme changes
   useEffect(() => {
@@ -62,14 +57,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Apply .dark class to <html>
   useEffect(() => {
-    if (!mounted) return;
     const html = document.documentElement;
     if (resolvedTheme === "dark") {
       html.classList.add("dark");
     } else {
       html.classList.remove("dark");
     }
-  }, [resolvedTheme, mounted]);
+  }, [resolvedTheme]);
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);

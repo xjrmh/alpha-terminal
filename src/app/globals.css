@@ -102,11 +102,12 @@ select.appearance-none {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
+  padding: 0.45rem 0.9rem;
+  min-height: 2.05rem;
   border: 1px solid var(--green-accent);
   color: var(--green-accent);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -140,6 +141,23 @@ select.appearance-none {
 .btn-lang:hover {
   border-color: var(--green-accent);
   color: var(--green-accent);
+}
+.btn-lang-active {
+  border-color: var(--green-accent);
+  color: var(--green-accent);
+  background: var(--green-accent-dim);
+}
+
+/* Top banner controls use a larger touch target than form controls. */
+.btn-top {
+  min-height: 2.05rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.76rem;
+}
+
+.btn-top-select {
+  padding-left: 0.6rem;
+  padding-right: 1.15rem;
 }
 
 /* 3. nav-item + nav-item-active — sidebar nav links */

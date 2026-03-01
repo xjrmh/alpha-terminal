@@ -16,12 +16,17 @@ npm run dev
 - `OPENAI_API_KEY` — required for GPT-4o / GPT-4o Mini
 - `ANTHROPIC_API_KEY` — required for Claude Sonnet / Opus
 - `GOOGLE_AI_API_KEY` — required for Gemini Flash / Pro
+- `ENABLE_QUANT_MODULES` — server-side quant API switch (`true` by default)
+- `NEXT_PUBLIC_ENABLE_QUANT_MODULES` — show/hide quant modules in UI
+- `NEXT_PUBLIC_ENABLE_EXPERT_MODE` — show/hide Expert Mode toggle in UI
 
 ## Features
 
 - 10 AI-powered financial analysis modules
+- 4 deterministic quant strategy modules with signal + backtest output
 - Bilingual (English / Chinese)
 - Light / Dark / Auto theme
+- Expert mode with per-strategy settings persistence
 - Streaming AI responses with markdown rendering
 - Multi-model support (OpenAI, Anthropic, Google)
 
@@ -37,6 +42,10 @@ npm run dev
 8. **Institutional Flow** — 13F hedge fund tracking
 9. **Portfolio Hedging** — Hedge recommendations with options/ETFs
 10. **Weekly Briefing** — Executive summary of the week
+11. **Quant Dual Momentum** — Monthly ETF trend + relative momentum allocation
+12. **Quant Multifactor Stocks** — Value/Quality/Momentum stock basket
+13. **Quant Low Beta + Quality** — Defensive quality equity sleeve
+14. **Quant Vol Target Overlay** — Weekly risk-scaling overlay
 
 ## Deploy
 

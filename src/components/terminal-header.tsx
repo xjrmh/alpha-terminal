@@ -6,6 +6,7 @@ import { useAnalysis } from "@/lib/analysis/context";
 import { ModelSelector } from "./model-selector";
 import { LangToggle } from "./lang-toggle";
 import { ThemeToggle } from "./theme-toggle";
+import { ExpertToggle } from "./expert-toggle";
 
 export function TerminalHeader() {
   const { t } = useLanguage();
@@ -38,6 +39,7 @@ export function TerminalHeader() {
       </div>
       <div className="flex items-center gap-2">
         <ModelSelector value={modelId} onChange={setModelId} />
+        <ExpertToggle />
         <ThemeToggle />
         <LangToggle />
       </div>

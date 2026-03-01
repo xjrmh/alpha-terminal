@@ -16,7 +16,7 @@ export function Sidebar() {
           href="/"
           className="flex items-center gap-1.5 no-underline"
         >
-          <span className="text-green-accent text-xs font-bold tracking-widest uppercase">
+          <span className="text-green-accent text-sm font-bold tracking-widest uppercase">
             {t.appTitle}
           </span>
           <span className="terminal-cursor" />
