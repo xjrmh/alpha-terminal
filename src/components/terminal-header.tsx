@@ -57,11 +57,6 @@ export function TerminalHeader({
                   ? t.refreshAnalysis
                   : t.runAnalysis}
             </button>
-            {isLoading && (
-              <span className="text-text-muted text-xs animate-pulse">
-                ● {t.loading}
-              </span>
-            )}
             {!isLoading && runDisabledByApiKey && (
               <span className="text-red-accent text-xs">{t.modelApiKeyRequired}</span>
             )}
