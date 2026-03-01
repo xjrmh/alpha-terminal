@@ -64,7 +64,7 @@ export function TerminalHeader({
     : null;
 
   return (
-    <header className="h-15 flex items-center justify-between gap-3 px-3 sm:px-4 border-b border-border bg-bg-secondary">
+    <header className="h-15 flex items-center justify-between gap-3 px-3 sm:px-6 border-b border-border bg-bg-secondary">
       <div className="min-w-0 flex items-center gap-2">
         {onToggleMobileMenu && (
           <button
