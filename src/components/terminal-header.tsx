@@ -1,62 +1,48 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useModel } from "@/lib/model/context";
 import { useAnalysis } from "@/lib/analysis/context";
-import { getModelProvider } from "@/lib/ai/models";
-import { ModelSelector } from "./model-selector";
-import { LangToggle } from "./lang-toggle";
-import { ThemeToggle } from "./theme-toggle";
-import { ExpertToggle } from "./expert-toggle";
+import { TerminalSettings } from "./terminal-settings";
 
-export function TerminalHeader() {
+interface TerminalHeaderProps {
+  mobileMenuOpen?: boolean;
+  onToggleMobileMenu?: () => void;
+}
+
+export function TerminalHeader({
+  mobileMenuOpen = false,
+  onToggleMobileMenu,
+}: TerminalHeaderProps) {
   const { t } = useLanguage();
   const {
     modelId,
-    setModelId,
     hasRequiredApiKey,
-    promptForModelApiKey,
     apiKeyError,
-    setApiKeyError,
   } = useModel();
   const { onRun, isLoading, requiresModelCredentials, showRefreshCta } = useAnalysis();
 
   const runDisabledByApiKey =
     requiresModelCredentials && !hasRequiredApiKey(modelId);
 
-  const handleModelChange = useCallback(
-    async (nextModelId: string) => {
-      setModelId(nextModelId);
-      if (!hasRequiredApiKey(nextModelId)) {
-        const ok = await promptForModelApiKey(nextModelId);
-        if (!ok) {
-          setApiKeyError(t.modelApiKeyRequired);
-        }
-      } else {
-        setApiKeyError(null);
-      }
-    },
-    [hasRequiredApiKey, promptForModelApiKey, setApiKeyError, setModelId, t.modelApiKeyRequired]
-  );
-
-  const handleSetKey = useCallback(async () => {
-    const ok = await promptForModelApiKey(modelId);
-    if (!ok) {
-      setApiKeyError(t.modelApiKeyRequired);
-    } else {
-      setApiKeyError(null);
-    }
-  }, [modelId, promptForModelApiKey, setApiKeyError, t.modelApiKeyRequired]);
-
-  const showSetApiKeyButton = useMemo(
-    () => getModelProvider(modelId) !== "openai",
-    [modelId]
-  );
-
   return (
-    <header className="h-15 flex items-center justify-between px-4 border-b border-border bg-bg-secondary">
-      <div className="flex items-center gap-2">
+    <header className="h-15 flex items-center justify-between gap-3 px-3 sm:px-4 border-b border-border bg-bg-secondary">
+      <div className="min-w-0 flex items-center gap-2">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            className="btn-lang btn-top md:hidden !px-2.5"
+            onClick={onToggleMobileMenu}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+          >
+            <span className="flex h-3 w-3 flex-col justify-between">
+              <span className="block h-0.5 w-full bg-current" />
+              <span className="block h-0.5 w-full bg-current" />
+              <span className="block h-0.5 w-full bg-current" />
+            </span>
+          </button>
+        )}
         {onRun ? (
           <>
             <button
@@ -86,32 +72,12 @@ export function TerminalHeader() {
             )}
           </>
         ) : (
-          <span className="text-text-muted text-xs tracking-wide">
+          <span className="text-text-muted text-xs tracking-wide truncate">
             {t.appSubtitle}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <ModelSelector
-          value={modelId}
-          onChange={(nextModelId) => {
-            void handleModelChange(nextModelId);
-          }}
-        />
-        {showSetApiKeyButton && (
-          <button
-            className="btn-lang btn-top"
-            onClick={() => {
-              void handleSetKey();
-            }}
-          >
-            {t.setApiKey}
-          </button>
-        )}
-        <ExpertToggle />
-        <ThemeToggle />
-        <LangToggle />
-      </div>
+      <TerminalSettings className="hidden md:flex" />
     </header>
   );
 }

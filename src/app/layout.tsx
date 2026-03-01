@@ -6,8 +6,7 @@ import { ModelProvider } from "@/lib/model/context";
 import { AnalysisProvider } from "@/lib/analysis/context";
 import { ExpertModeProvider } from "@/lib/expert/context";
 import { QuantSettingsProvider } from "@/lib/quant/settings-context";
-import { Sidebar } from "@/components/sidebar";
-import { TerminalHeader } from "@/components/terminal-header";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -49,13 +48,7 @@ export default function RootLayout({
               <ExpertModeProvider>
                 <QuantSettingsProvider>
                   <AnalysisProvider>
-                    <div className="flex h-screen overflow-hidden">
-                      <Sidebar />
-                      <div className="flex-1 flex flex-col overflow-hidden">
-                        <TerminalHeader />
-                        <main className="flex-1 overflow-hidden">{children}</main>
-                      </div>
-                    </div>
+                    <AppShell>{children}</AppShell>
                   </AnalysisProvider>
                 </QuantSettingsProvider>
               </ExpertModeProvider>

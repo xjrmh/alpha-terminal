@@ -5,16 +5,28 @@ import { usePathname } from "next/navigation";
 import { MODULES } from "@/lib/modules";
 import { useLanguage } from "@/lib/i18n/context";
 
-export function Sidebar() {
+interface SidebarProps {
+  mobile?: boolean;
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
 
   return (
-    <aside className="w-56 shrink-0 border-r border-border bg-bg-secondary flex flex-col overflow-hidden">
+    <aside
+      className={
+        mobile
+          ? "h-full w-full border-r border-border bg-bg-secondary flex flex-col overflow-hidden"
+          : "w-56 shrink-0 border-r border-border bg-bg-secondary flex flex-col overflow-hidden"
+      }
+    >
       <div className="h-15 flex items-center px-4 border-b border-border">
         <Link
           href="/"
           className="flex items-center gap-1.5 no-underline"
+          onClick={onNavigate}
         >
           <span className="text-green-accent text-sm font-bold tracking-widest uppercase">
             {t.appTitle}
@@ -33,6 +45,7 @@ export function Sidebar() {
               key={mod.id}
               href={href}
               className={`nav-item ${isActive ? "nav-item-active" : ""}`}
+              onClick={onNavigate}
             >
               <span className="text-xs opacity-60">{mod.icon}</span>
               <span>{t.modules[mod.nameKey]}</span>

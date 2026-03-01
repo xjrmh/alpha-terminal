@@ -115,7 +115,7 @@ export function WatchlistModuleRunner() {
       {result && (
         <>
           <section className="border border-border bg-bg-secondary rounded overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="max-h-[60vh] overflow-auto">
               <table className="w-full min-w-[1180px] text-xs">
                 <thead>
                   <tr className="border-b border-border bg-bg-surface text-green-accent">
