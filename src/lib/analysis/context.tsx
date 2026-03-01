@@ -11,6 +11,8 @@ interface AnalysisContextType {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   requiresModelCredentials: boolean;
+  showRefreshCta: boolean;
+  setShowRefreshCta: (show: boolean) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | null>(null);
@@ -19,6 +21,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [onRun, setOnRun] = useState<(() => void) | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [requiresModelCredentials, setRequiresModelCredentials] = useState(true);
+  const [showRefreshCta, setShowRefreshCta] = useState(false);
 
   const registerOnRun = useCallback(
     (
@@ -27,6 +30,9 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     ) => {
       setOnRun(() => fn);
       setRequiresModelCredentials(options?.requiresModelCredentials ?? true);
+      if (!fn) {
+        setShowRefreshCta(false);
+      }
     },
     []
   );
@@ -39,6 +45,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         isLoading,
         setIsLoading,
         requiresModelCredentials,
+        showRefreshCta,
+        setShowRefreshCta,
       }}
     >
       {children}

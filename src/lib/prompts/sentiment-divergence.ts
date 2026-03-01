@@ -10,16 +10,10 @@ ${langInstruction}
 ## Task
 Find 6 stocks where market sentiment (negative news, bearish social media, analyst downgrades) clearly diverges from solid underlying fundamentals.
 
-## Required Format (for each of the 6 stocks)
-| Field | Details |
-|-------|---------|
-| **Ticker** | Stock symbol |
-| **Negative Sentiment** | What's driving the bearish narrative (specific news, social media trends, analyst actions) |
-| **Fundamental Reality** | Why fundamentals contradict the narrative (revenue growth, margins, cash flow, balance sheet) |
-| **Key Metrics** | P/E, revenue growth %, FCF yield, debt/equity |
-| **Technical Entry** | Suggested entry points (support levels, RSI, moving averages) |
-| **Catalyst for Re-rating** | What could change sentiment (earnings, buybacks, insider buying) |
-| **Sources** | Links to news and data |
+## Required Output Table
+Provide one markdown table with one row per stock and these columns:
+| Ticker | Negative Sentiment Driver | Fundamental Counterpoint | Key Metrics | Technical Entry | Re-rating Catalyst | Sources |
+|--------|---------------------------|--------------------------|-------------|-----------------|-------------------|---------|
 
 ## Additional Analysis
 - **Sentiment Indicators**: What tools/metrics are you using to gauge sentiment? (put/call ratio, social sentiment scores, short interest changes)
@@ -27,6 +21,8 @@ Find 6 stocks where market sentiment (negative news, bearish social media, analy
 
 ## Formatting Rules
 - Use markdown tables for structured data
+- Do not output empty template rows; each row must contain real data
+- If reliable data exists for fewer than 6 names, return fewer rows and explain why
 - Add citation links as [Source Name](URL)
 - Present a "Sources" section at the end`;
 }

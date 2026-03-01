@@ -18,11 +18,9 @@ Design an effective hedge for a portfolio exposed to broad US equity market risk
 - Key risks on the horizon (events, data releases, geopolitical)
 
 ### 2. Hedging Instruments
+Provide a populated table with at least 3 concrete instruments:
 | Instrument | Type | Description | Annualized Cost | Pros | Cons |
 |-----------|------|-------------|-----------------|------|------|
-| (e.g., SPY puts) | Options | (details) | (cost as % of portfolio) | | |
-| (e.g., SH/SDS) | Inverse ETF | (details) | (drag) | | |
-| (e.g., VIX calls) | Vol | (details) | (cost) | | |
 
 ### 3. Recommended Hedge Strategy
 - **Primary Hedge**: Instrument, strike/expiry, size (% of portfolio)
@@ -31,17 +29,19 @@ Design an effective hedge for a portfolio exposed to broad US equity market risk
 - **Activation Scenario**: What triggers you to put the hedge on
 
 ### 4. Hedge Sizing Guide
+Provide a populated table with concrete size/cost/protection estimates:
 | Portfolio Size | Hedge Size | Monthly Cost | Protection Level |
 |---------------|------------|--------------|-----------------|
-| $100K | | | |
-| $500K | | | |
-| $1M | | | |
+| $100K | ... | ... | ... |
+| $500K | ... | ... | ... |
+| $1M | ... | ... | ... |
 
 ### 5. Sources
 Volatility data sources, options pricing references, and ETF information.
 
 ## Formatting Rules
 - Use markdown tables for structured data
+- Do not output placeholder or empty template rows
 - Add citation links as [Source Name](URL)
 - Include current prices and implied volatility levels`;
 }

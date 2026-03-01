@@ -29,7 +29,8 @@ export const MODELS: ModelConfig[] = [
   },
 ];
 
-export const DEFAULT_MODEL = MODELS[0];
+export const DEFAULT_MODEL =
+  MODELS.find((model) => model.id === "openai:gpt-4o-mini") ?? MODELS[0];
 
 export type ModelProvider = ModelConfig["provider"];
 export type ExternalModelProvider = Exclude<ModelProvider, "openai">;

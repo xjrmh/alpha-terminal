@@ -19,6 +19,7 @@ interface RunNarrativeParams {
   language: Language;
   modelId: string;
   providerApiKey?: string;
+  expertMode: boolean;
 }
 
 type NarrativeListener = (state: NarrativeRunState) => void;
@@ -143,7 +144,8 @@ function setState(
 }
 
 export function getNarrativeRunKey(params: RunNarrativeParams): string {
-  return `${params.moduleId}|${params.language}|${params.modelId}`;
+  const modePart = params.expertMode ? "mode:expert" : "mode:standard";
+  return `${params.moduleId}|${params.language}|${params.modelId}|${modePart}`;
 }
 
 export function getNarrativeRunState(key: string): NarrativeRunState {

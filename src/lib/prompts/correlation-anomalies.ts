@@ -27,20 +27,15 @@ For each anomaly:
 
 ### 3. Trade Recommendations
 Provide 3 specific trades that benefit from correlation normalization:
-| Field | Details |
-|-------|---------|
-| **Trade** | Long/Short description |
-| **Instruments** | Specific ETFs, futures, or stocks |
-| **Entry** | Current levels and trigger |
-| **Target** | Expected move if correlation normalizes |
-| **Stop Loss** | Risk management level |
-| **Timeframe** | Expected duration |
+| Trade | Instruments | Entry | Target | Stop Loss | Timeframe |
+|-------|-------------|-------|--------|-----------|-----------|
 
 ### 4. Sources
 List all data sources with links.
 
 ## Formatting Rules
 - Use markdown headers and tables
+- Do not output empty template rows; each row must contain real trade details
 - Include specific correlation coefficients and timeframes
 - Add citation links as [Source Name](URL)`;
 }

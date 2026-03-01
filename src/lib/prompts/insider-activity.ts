@@ -8,19 +8,12 @@ export function getInsiderActivityPrompt(lang: Language): string {
 ${langInstruction}
 
 ## Task
-Search OpenInsider, SEC Form 4 filings, and recent financial news. Find 6 stocks with significant insider buying (>$100k individual purchases) in the past 30 days.
+Search OpenInsider, SEC Form 4 filings, and recent financial news. Find up to 6 stocks with significant insider buying (>$100k individual purchases) in the past 30 days.
 
-## Required Format (for each of the 6 stocks)
-| Field | Details |
-|-------|---------|
-| **Ticker** | Stock symbol |
-| **Insider** | Name and position (CEO, CFO, Director, etc.) |
-| **Purchase Amount** | Total $ amount purchased |
-| **Purchase Price** | Price per share at purchase |
-| **Current Price** | Current market price |
-| **Gain/Loss** | % change since purchase |
-| **What They Might Know** | Brief analysis of why this insider might be buying (upcoming catalysts, undervaluation thesis, sector tailwinds) |
-| **Sources** | Links to SEC filing and relevant news |
+## Required Output Table
+Provide one markdown table with one row per stock and these columns:
+| Ticker | Insider (Role) | Buy Date | Purchase Amount | Purchase Price | Current Price | P/L Since Buy | Why It Matters | Key Risk | Sources |
+|--------|----------------|----------|-----------------|----------------|---------------|---------------|----------------|----------|---------|
 
 ## Additional Analysis
 After the table, provide:
@@ -29,6 +22,8 @@ After the table, provide:
 
 ## Formatting Rules
 - Use markdown tables for structured data
+- Do not output empty template rows; each row must contain real data
+- If fewer than 6 names have reliable and recent data, return fewer rows and explain why
 - Add citation links as [Source Name](URL)
 - Present a "Sources" section at the end
 - Be specific with numbers and dates`;

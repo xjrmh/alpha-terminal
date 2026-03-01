@@ -124,6 +124,35 @@ select.appearance-none {
   cursor: not-allowed;
 }
 
+@keyframes btn-refresh-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green-accent) 0%, transparent);
+    background: transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--green-accent) 16%, transparent);
+    background: color-mix(in srgb, var(--green-accent) 8%, transparent);
+  }
+}
+
+.btn-run-refresh {
+  animation: btn-refresh-pulse 2.2s ease-in-out infinite;
+}
+
+.btn-run-refresh:disabled {
+  animation: none;
+}
+
+.btn-run-refresh:hover:not(:disabled) {
+  animation: none;
+  background: var(--green-accent);
+  color: var(--bg-primary);
+  border-color: var(--green-accent);
+  box-shadow: none;
+}
+
 /* 2. btn-lang — language toggle button */
 .btn-lang {
   padding: 0.25rem 0.625rem;

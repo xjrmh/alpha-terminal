@@ -20,14 +20,14 @@ For each event:
 - **Trade Implication**: How to position
 
 ### 2. Key Earnings & Expectations
+Provide a populated table (one row per company):
 | Company | Date | EPS Estimate | Revenue Est. | Key Focus | Options Implied Move |
 |---------|------|-------------|-------------|-----------|---------------------|
-| | | | | | |
 
 ### 3. Capital Flows by Sector
+Provide a populated table (one row per sector):
 | Sector | Weekly Flow ($M) | Direction | Notable |
 |--------|-----------------|-----------|---------|
-| | | Inflow/Outflow | |
 
 ### 4. Trade Ideas
 **Long Idea:**
@@ -50,6 +50,7 @@ List all referenced sources with links.
 ## Formatting Rules
 - Keep it concise — this is an executive summary, not a research report
 - Use markdown tables, bold, and bullet points
+- Do not output placeholder or empty template rows
 - Add citation links as [Source Name](URL)
 - Maximum 800-1000 words`;
 }

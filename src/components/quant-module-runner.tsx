@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useAnalysis } from "@/lib/analysis/context";
 import {
@@ -10,6 +10,7 @@ import {
   subscribeQuantRun,
 } from "@/lib/analysis/quant-runner";
 import { useExpertMode } from "@/lib/expert/context";
+import { useModel } from "@/lib/model/context";
 import { useQuantSettings } from "@/lib/quant/settings-context";
 import type {
   QuantStrategyConfig,
@@ -48,9 +49,14 @@ function configRows(config: QuantStrategyConfig): Array<[string, string]> {
 
 export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
   const { lang, t } = useLanguage();
-  const { registerOnRun, setIsLoading } = useAnalysis();
+  const { registerOnRun, setIsLoading, setShowRefreshCta } = useAnalysis();
+  const { modelId } = useModel();
   const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
   const { hydrated, getConfig, setConfig, resetConfig } = useQuantSettings();
+  const effectiveExpertMode = expertAvailable && expertEnabled;
+  const prevModelIdRef = useRef(modelId);
+  const prevExpertModeRef = useRef(effectiveExpertMode);
+  const needsRefreshRef = useRef(false);
 
   const [overlayBase, setOverlayBase] = useState<
     Exclude<QuantStrategyId, "quant-volatility-target-overlay">
@@ -64,18 +70,20 @@ export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
       strategyId,
       language: lang,
       config,
-      expertMode: expertAvailable && expertEnabled,
+      expertMode: effectiveExpertMode,
       overlayBaseStrategyId:
         strategyId === "quant-volatility-target-overlay"
           ? overlayBase
           : undefined,
     });
+    needsRefreshRef.current = false;
+    setShowRefreshCta(false);
   }, [
     config,
-    expertAvailable,
-    expertEnabled,
+    effectiveExpertMode,
     lang,
     overlayBase,
+    setShowRefreshCta,
     strategyId,
   ]);
 
@@ -92,10 +100,31 @@ export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
     setIsLoading(runState.isLoading);
   }, [runState.isLoading, setIsLoading]);
 
-  const advancedVisible = expertAvailable && expertEnabled;
+  const advancedVisible = effectiveExpertMode;
   const signal = runState.signal;
   const backtest = runState.backtest;
   const showScan = !signal && !backtest && !runState.error;
+  const hasAnalysis = Boolean(signal || backtest);
+
+  useEffect(() => {
+    if (!hasAnalysis) {
+      needsRefreshRef.current = false;
+      setShowRefreshCta(false);
+      return;
+    }
+
+    const modelChanged = prevModelIdRef.current !== modelId;
+    const expertChanged = prevExpertModeRef.current !== effectiveExpertMode;
+    if (modelChanged || expertChanged) {
+      needsRefreshRef.current = true;
+    }
+    setShowRefreshCta(needsRefreshRef.current);
+  }, [effectiveExpertMode, hasAnalysis, modelId, setShowRefreshCta]);
+
+  useEffect(() => {
+    prevModelIdRef.current = modelId;
+    prevExpertModeRef.current = effectiveExpertMode;
+  }, [effectiveExpertMode, modelId]);
 
   return (
     <div className="relative flex flex-col h-full overflow-y-auto p-6 gap-4">

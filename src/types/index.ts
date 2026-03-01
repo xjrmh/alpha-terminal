@@ -35,6 +35,7 @@ export interface AnalyzeRequest {
   language: Language;
   modelId: string;
   providerApiKey?: string;
+  expertMode?: boolean;
 }
 
 export type LookbackMode = "fixed_years" | "since_inception";

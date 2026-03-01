@@ -10,17 +10,10 @@ ${langInstruction}
 ## Task
 Search financial news, deal rumors, and analyst reports. Find 5 companies with acquisition rumors or a high probability of being acquired due to industry consolidation, attractive valuation, or shareholder activism.
 
-## Required Format (for each of the 5 companies)
-| Field | Details |
-|-------|---------|
-| **Ticker** | Stock symbol and company name |
-| **Potential Acquirer(s)** | Most likely buyer(s) with reasoning |
-| **Deal Rationale** | Why this acquisition makes strategic sense |
-| **Estimated Premium** | Expected acquisition premium based on historical comps |
-| **Current Valuation** | EV/EBITDA, P/E vs. peers |
-| **Regulatory Risk** | Antitrust concerns (Low/Medium/High) |
-| **Timeline** | Expected timeframe |
-| **Sources** | 2 source links minimum |
+## Required Output Table
+Provide one markdown table with one row per company and these columns:
+| Ticker (Company) | Potential Acquirer(s) | Deal Rationale | Estimated Premium | Current Valuation vs Peers | Regulatory Risk | Expected Timeline | Sources |
+|------------------|------------------------|----------------|-------------------|----------------------------|-----------------|------------------|---------|
 
 ## Additional Analysis
 - **Sector Trends**: Which industries are seeing the most M&A activity?
@@ -28,6 +21,8 @@ Search financial news, deal rumors, and analyst reports. Find 5 companies with a
 
 ## Formatting Rules
 - Use markdown tables for structured data
+- Do not output empty template rows; each row must contain real data
+- If you cannot find 5 reliable candidates, return fewer rows and explain why
 - Add citation links as [Source Name](URL)
 - Present a "Sources" section at the end
 - Be specific with valuations and premiums`;

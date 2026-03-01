@@ -20,7 +20,7 @@ export function TerminalHeader() {
     apiKeyError,
     setApiKeyError,
   } = useModel();
-  const { onRun, isLoading, requiresModelCredentials } = useAnalysis();
+  const { onRun, isLoading, requiresModelCredentials, showRefreshCta } = useAnalysis();
 
   const runDisabledByApiKey =
     requiresModelCredentials && !hasRequiredApiKey(modelId);
@@ -60,12 +60,16 @@ export function TerminalHeader() {
         {onRun ? (
           <>
             <button
-              className="btn-run"
+              className={`btn-run ${showRefreshCta ? "btn-run-refresh" : ""}`}
               onClick={onRun}
               disabled={isLoading || runDisabledByApiKey}
               title={runDisabledByApiKey ? t.modelApiKeyRequired : undefined}
             >
-              {isLoading ? t.loading : t.runAnalysis}
+              {isLoading
+                ? t.loading
+                : showRefreshCta
+                  ? t.refreshAnalysis
+                  : t.runAnalysis}
             </button>
             {isLoading && (
               <span className="text-text-muted text-xs animate-pulse">

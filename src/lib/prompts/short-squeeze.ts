@@ -10,18 +10,10 @@ ${langInstruction}
 ## Task
 Use web data from Finviz, Shortquote, financial news, and other sources. Find 5 stocks with high short interest (>20% of float), high borrow rates, and upcoming catalysts that could trigger a squeeze.
 
-## Required Format (for each of the 5 stocks)
-| Field | Details |
-|-------|---------|
-| **Ticker** | Stock symbol |
-| **Short Interest** | % of float short |
-| **Days to Cover** | Short interest ratio |
-| **Borrow Rate** | Current cost to borrow |
-| **Upcoming Catalyst** | Specific event with date (earnings, FDA decision, etc.) |
-| **Entry Strategy** | Suggested entry approach (price levels, options strategy) |
-| **Squeeze Probability** | High/Medium/Low with reasoning |
-| **Risk of Failed Squeeze** | What could go wrong |
-| **Sources** | Links to data sources |
+## Required Output Table
+Provide one markdown table with one row per stock and these columns:
+| Ticker | Short Interest (% Float) | Days to Cover | Borrow Rate | Upcoming Catalyst (Date) | Entry Strategy | Squeeze Probability | Failed Squeeze Risk | Sources |
+|--------|---------------------------|---------------|-------------|---------------------------|----------------|---------------------|---------------------|---------|
 
 ## Additional Analysis
 - **Market Conditions**: Is the current market environment favorable for squeezes? (volatility, retail sentiment, liquidity)
@@ -29,6 +21,8 @@ Use web data from Finviz, Shortquote, financial news, and other sources. Find 5 
 
 ## Formatting Rules
 - Use markdown tables for structured data
+- Do not output empty template rows; each row must contain real data
+- If reliable data is unavailable for 5 names, return fewer rows and explain why
 - Add citation links as [Source Name](URL)
 - Present a "Sources" section at the end
 - Be specific with numbers and dates`;

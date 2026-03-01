@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -28,8 +29,17 @@ function loadStoredExpertMode(): boolean {
 
 export function ExpertModeProvider({ children }: { children: ReactNode }) {
   const available = isExpertModeEnabled();
-  const [storedEnabled, setEnabledState] = useState(() => loadStoredExpertMode());
+  const [storedEnabled, setEnabledState] = useState(false);
   const enabled = available ? storedEnabled : false;
+
+  useEffect(() => {
+    if (!available) return;
+    const nextValue = loadStoredExpertMode();
+    const timer = window.setTimeout(() => {
+      setEnabledState(nextValue);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [available]);
 
   const setEnabled = useCallback(
     (next: boolean) => {

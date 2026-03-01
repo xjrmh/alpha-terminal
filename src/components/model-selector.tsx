@@ -23,7 +23,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         title={t.selectModel}
-        className="btn-lang btn-top btn-top-select appearance-none max-w-28 truncate cursor-pointer outline-none
+        className="btn-lang btn-top btn-top-select appearance-none max-w-32 truncate cursor-pointer outline-none
                    [&::-ms-expand]:hidden"
       >
         <optgroup label="OpenAI">

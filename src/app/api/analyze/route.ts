@@ -12,10 +12,12 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const { moduleId, language, modelId, providerApiKey } =
+    const { moduleId, language, modelId, providerApiKey, expertMode } =
       (await req.json()) as AnalyzeRequest;
 
-    const systemPrompt = getSystemPrompt(moduleId, language);
+    const systemPrompt = getSystemPrompt(moduleId, language, {
+      expertMode: expertMode ?? false,
+    });
     const model = resolveModel(modelId, providerApiKey);
 
     const result = streamText({
