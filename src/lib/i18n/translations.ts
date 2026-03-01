@@ -20,6 +20,13 @@ export const translations = {
     expertOff: "EXPERT",
     expertModeOn: "Expert mode is enabled",
     expertModeOff: "Enable expert mode",
+    runAllAnalysis: "RUN ALL ANALYSIS",
+    runAllCancel: "CANCEL",
+    navGroups: {
+      intelligence: "Intelligence",
+      scanners: "Scanners",
+      quant: "Quant Strategies",
+    },
     modules: {
       "macro-landscape": "Macro Landscape",
       "insider-activity": "Insider Activity",
@@ -169,6 +176,13 @@ export const translations = {
     expertOff: "专家",
     expertModeOn: "专家模式已开启",
     expertModeOff: "开启专家模式",
+    runAllAnalysis: "运行全部分析",
+    runAllCancel: "取消",
+    navGroups: {
+      intelligence: "情报分析",
+      scanners: "扫描工具",
+      quant: "量化策略",
+    },
     modules: {
       "macro-landscape": "宏观全景",
       "insider-activity": "内部人交易",

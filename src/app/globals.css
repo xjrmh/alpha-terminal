@@ -357,6 +357,16 @@ select.appearance-none {
   50% { opacity: 0; }
 }
 
+/* 5b. nav-dot-loading — pulsing dot for in-progress analysis */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.nav-dot-loading {
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
 /* 6. terminal-scan + ::after — scan line animation */
 .terminal-scan {
   pointer-events: none;
