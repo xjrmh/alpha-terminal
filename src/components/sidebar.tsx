@@ -85,8 +85,17 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
       </nav>
 
       <div className="px-4 py-3 border-t border-border">
-        <div className="text-text-muted text-[0.6rem] tracking-wide uppercase">
-          v1.0 · {t.ready}
+        <div className="text-text-muted text-[0.6rem] tracking-wide">
+          &copy; 2026{" "}
+          <a
+            href="https://www.xjrmh.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-muted hover:text-green-accent transition-colors no-underline"
+          >
+            xjrmh
+          </a>
+          . Pre-alpha build.
         </div>
       </div>
     </aside>

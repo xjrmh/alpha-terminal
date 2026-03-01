@@ -41,14 +41,7 @@ export default function Home() {
               </p>
             </Link>
           ))}
-        </div>
-
-        {/* Footer info */}
-        <div className="mt-8 pt-4 border-t border-border text-text-muted text-[0.6rem] tracking-wide">
-          <span className="text-green-accent">◆</span> {t.appTitle} ·{" "}
-          {t.appSubtitle}
-        </div>
-      </div>
+        </div>      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import type {
   WatchlistScanResponse,
   WatchlistTimeRange,
 } from "@/types";
+import { isCacheExpired } from "./cache-expiry";
 
 interface WatchlistRunState {
   result: WatchlistScanResponse | null;
@@ -67,13 +68,15 @@ function loadCachedState(key: string): WatchlistRunState {
   try {
     const parsed = JSON.parse(raw) as Partial<WatchlistCacheRecord>;
     if (parsed.version !== CACHE_VERSION || !parsed.result) return defaultState();
+    const updatedAt =
+      typeof parsed.updatedAt === "string" ? parsed.updatedAt : null;
+    if (isCacheExpired(updatedAt)) return defaultState();
 
     return {
       result: parsed.result as WatchlistScanResponse,
       error: null,
       isLoading: false,
-      updatedAt:
-        typeof parsed.updatedAt === "string" ? parsed.updatedAt : null,
+      updatedAt,
     };
   } catch {
     return defaultState();

@@ -5,6 +5,7 @@ import type {
   QuantStrategyConfig,
   QuantStrategyId,
 } from "@/types";
+import { isCacheExpired } from "./cache-expiry";
 
 interface QuantRunState {
   signal: QuantSignalResponse | null;
@@ -79,14 +80,16 @@ function loadCachedState(key: string): QuantRunState {
   try {
     const parsed = JSON.parse(raw) as Partial<QuantCacheRecord>;
     if (parsed.version !== CACHE_VERSION) return defaultState();
+    const updatedAt =
+      typeof parsed.updatedAt === "string" ? parsed.updatedAt : null;
+    if (isCacheExpired(updatedAt)) return defaultState();
 
     return {
       signal: (parsed.signal as QuantSignalResponse) ?? null,
       backtest: (parsed.backtest as QuantBacktestResponse) ?? null,
       error: null,
       isLoading: false,
-      updatedAt:
-        typeof parsed.updatedAt === "string" ? parsed.updatedAt : null,
+      updatedAt,
     };
   } catch {
     return defaultState();

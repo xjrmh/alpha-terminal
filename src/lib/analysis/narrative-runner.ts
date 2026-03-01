@@ -1,5 +1,6 @@
 import type { Language } from "@/lib/i18n/types";
 import type { NarrativeModuleId } from "@/types";
+import { isCacheExpired } from "./cache-expiry";
 
 interface NarrativeRunState {
   completion: string;
@@ -82,10 +83,11 @@ function loadCachedState(key: string): NarrativeRunState {
   try {
     const parsed = JSON.parse(raw) as Partial<NarrativeCacheRecord>;
     if (parsed.version !== CACHE_VERSION) return defaultState();
-    const completion =
-      typeof parsed.completion === "string" ? parsed.completion : "";
     const updatedAt =
       typeof parsed.updatedAt === "string" ? parsed.updatedAt : null;
+    if (isCacheExpired(updatedAt)) return defaultState();
+    const completion =
+      typeof parsed.completion === "string" ? parsed.completion : "";
 
     return {
       completion,
