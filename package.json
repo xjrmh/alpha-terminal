@@ -14,6 +14,7 @@
     "@ai-sdk/openai": "^3.0.37",
     "@ai-sdk/react": "^3.0.107",
     "@tailwindcss/typography": "^0.5.19",
+    "@upstash/redis": "^1.36.3",
     "ai": "^6.0.105",
     "next": "16.1.6",
     "react": "19.2.3",
