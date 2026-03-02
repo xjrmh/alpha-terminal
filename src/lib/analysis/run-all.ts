@@ -1,5 +1,10 @@
 import type { Language } from "@/lib/i18n/types";
-import type { ModuleId, NarrativeModuleId, QuantStrategyConfig, QuantStrategyId } from "@/types";
+import type {
+  ModuleId,
+  NarrativeModuleId,
+  QuantStrategyConfig,
+  QuantStrategyId,
+} from "@/types";
 import { MODULES, NARRATIVE_MODULES, QUANT_MODULES } from "@/lib/modules";
 import { isQuantModulesEnabled } from "@/lib/features";
 import {
@@ -84,12 +89,20 @@ export function cancelRunAll() {
   setState({ isRunning: false, currentModuleId: null, error: null });
 }
 
+function quantOverlayBase(
+  strategyId: QuantStrategyId
+): Exclude<QuantStrategyId, "quant-volatility-target-overlay"> | undefined {
+  if (strategyId !== "quant-volatility-target-overlay") return undefined;
+  return "quant-dual-momentum";
+}
+
 /** Check whether a specific module has cached results ready. */
 export function isModuleReady(
   moduleId: ModuleId,
   language: Language,
   modelId: string,
-  expertMode: boolean
+  expertMode: boolean,
+  getQuantConfig: (id: QuantStrategyId) => QuantStrategyConfig
 ): boolean {
   const mod = MODULES.find((m) => m.id === moduleId);
   if (!mod) return false;
@@ -106,38 +119,47 @@ export function isModuleReady(
   }
 
   if (mod.kind === "watchlist") {
-    const key = getWatchlistRunKey("1D");
+    const key = getWatchlistRunKey({
+      timeRange: "1D",
+      modelId,
+      expertMode,
+    });
     const state = getWatchlistRunState(key);
     return Boolean(state.result);
   }
 
   if (mod.kind === "quant") {
-    const key = getQuantRunKey(moduleId as QuantStrategyId);
+    const strategyId = moduleId as QuantStrategyId;
+    const key = getQuantRunKey({
+      strategyId,
+      language,
+      modelId,
+      config: getQuantConfig(strategyId),
+      expertMode,
+      overlayBaseStrategyId: quantOverlayBase(strategyId),
+    });
     const state = getQuantRunState(key);
-    return Boolean(state.signal);
+    return Boolean(state.signal && state.backtest);
   }
 
   return false;
 }
 
-/** Run all modules sequentially, skipping ones that already have cached results. */
+/** Run all modules sequentially and defer rerun eligibility to the shared cache mode. */
 export async function runAll(params: RunAllParams): Promise<void> {
   const { language, modelId, providerApiKey, expertMode, getQuantConfig } = params;
   cancelled = false;
 
-  // Build the list of narrative modules (excluding watchlist which is in NARRATIVE_MODULES array)
   const narrativeOnly = NARRATIVE_MODULES.filter((m) => m.kind === "narrative");
   const watchlistMod = NARRATIVE_MODULES.find((m) => m.kind === "watchlist");
   const quantMods = isQuantModulesEnabled() ? QUANT_MODULES : [];
-
   const allModules = [...narrativeOnly, ...(watchlistMod ? [watchlistMod] : []), ...quantMods];
-  const totalCount = allModules.length;
 
   setState({
     isRunning: true,
     currentModuleId: null,
     completedCount: 0,
-    totalCount,
+    totalCount: allModules.length,
     error: null,
   });
 
@@ -145,14 +167,6 @@ export async function runAll(params: RunAllParams): Promise<void> {
 
   for (const mod of allModules) {
     if (cancelled) return;
-
-    // Skip if already cached
-    if (isModuleReady(mod.id as ModuleId, language, modelId, expertMode)) {
-      completedCount++;
-      setState({ completedCount });
-      continue;
-    }
-
     setState({ currentModuleId: mod.id as ModuleId });
 
     try {
@@ -163,27 +177,35 @@ export async function runAll(params: RunAllParams): Promise<void> {
           modelId,
           providerApiKey,
           expertMode,
+          mode: "refresh_if_eligible",
         });
       } else if (mod.kind === "watchlist") {
-        await runWatchlistScan({ timeRange: "1D" });
+        await runWatchlistScan({
+          timeRange: "1D",
+          modelId,
+          expertMode,
+          mode: "refresh_if_eligible",
+        });
       } else if (mod.kind === "quant") {
         const strategyId = mod.id as QuantStrategyId;
         await runQuantAnalysis({
           strategyId,
           language,
+          modelId,
           config: getQuantConfig(strategyId),
           expertMode,
+          overlayBaseStrategyId: quantOverlayBase(strategyId),
+          mode: "refresh_if_eligible",
         });
       }
     } catch (error: unknown) {
       if (cancelled) return;
       const message = error instanceof Error ? error.message : "Unknown error";
       setState({ error: message });
-      // Continue to next module despite error
     }
 
     if (cancelled) return;
-    completedCount++;
+    completedCount += 1;
     setState({ completedCount });
   }
 
@@ -196,7 +218,8 @@ function isModuleLoading(
   moduleId: ModuleId,
   language: Language,
   modelId: string,
-  expertMode: boolean
+  expertMode: boolean,
+  getQuantConfig: (id: QuantStrategyId) => QuantStrategyConfig
 ): boolean {
   const mod = MODULES.find((m) => m.id === moduleId);
   if (!mod) return false;
@@ -212,11 +235,25 @@ function isModuleLoading(
   }
 
   if (mod.kind === "watchlist") {
-    return getWatchlistRunState(getWatchlistRunKey("1D")).isLoading;
+    const key = getWatchlistRunKey({
+      timeRange: "1D",
+      modelId,
+      expertMode,
+    });
+    return getWatchlistRunState(key).isLoading;
   }
 
   if (mod.kind === "quant") {
-    return getQuantRunState(getQuantRunKey(moduleId as QuantStrategyId)).isLoading;
+    const strategyId = moduleId as QuantStrategyId;
+    const key = getQuantRunKey({
+      strategyId,
+      language,
+      modelId,
+      config: getQuantConfig(strategyId),
+      expertMode,
+      overlayBaseStrategyId: quantOverlayBase(strategyId),
+    });
+    return getQuantRunState(key).isLoading;
   }
 
   return false;
@@ -231,6 +268,7 @@ export function subscribeModuleStatus(
   language: Language,
   modelId: string,
   expertMode: boolean,
+  getQuantConfig: (id: QuantStrategyId) => QuantStrategyConfig,
   listener: (status: ModuleStatus) => void
 ): () => void {
   const unsubscribers: (() => void)[] = [];
@@ -240,17 +278,16 @@ export function subscribeModuleStatus(
     const loading = new Set<string>();
     for (const mod of MODULES) {
       const id = mod.id as ModuleId;
-      if (isModuleReady(id, language, modelId, expertMode)) {
+      if (isModuleReady(id, language, modelId, expertMode, getQuantConfig)) {
         completed.add(mod.id);
       }
-      if (isModuleLoading(id, language, modelId, expertMode)) {
+      if (isModuleLoading(id, language, modelId, expertMode, getQuantConfig)) {
         loading.add(mod.id);
       }
     }
     listener({ completedIds: completed, loadingIds: loading });
   };
 
-  // Subscribe to all narrative modules
   for (const mod of NARRATIVE_MODULES.filter((m) => m.kind === "narrative")) {
     const key = getNarrativeRunKey({
       moduleId: mod.id as NarrativeModuleId,
@@ -261,24 +298,35 @@ export function subscribeModuleStatus(
     unsubscribers.push(subscribeNarrativeRun(key, () => check()));
   }
 
-  // Subscribe to watchlist (1D)
-  unsubscribers.push(subscribeWatchlistRun(getWatchlistRunKey("1D"), () => check()));
+  unsubscribers.push(
+    subscribeWatchlistRun(
+      getWatchlistRunKey({
+        timeRange: "1D",
+        modelId,
+        expertMode,
+      }),
+      () => check()
+    )
+  );
 
-  // Subscribe to quant modules
   if (isQuantModulesEnabled()) {
     for (const mod of QUANT_MODULES) {
-      const key = getQuantRunKey(mod.id as QuantStrategyId);
+      const strategyId = mod.id as QuantStrategyId;
+      const key = getQuantRunKey({
+        strategyId,
+        language,
+        modelId,
+        config: getQuantConfig(strategyId),
+        expertMode,
+        overlayBaseStrategyId: quantOverlayBase(strategyId),
+      });
       unsubscribers.push(subscribeQuantRun(key, () => check()));
     }
   }
 
-  // Also subscribe to run-all state changes
   unsubscribers.push(subscribeRunAll(() => check()));
 
-  // Poll as fallback — catches loading states that event subscriptions may miss
   const interval = setInterval(check, 1000);
-
-  // Initial check
   check();
 
   return () => {

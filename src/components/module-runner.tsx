@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useModel } from "@/lib/model/context";
 import { useAnalysis } from "@/lib/analysis/context";
@@ -16,7 +16,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { SkeletonLoader } from "./skeleton-loader";
 import { QuantModuleRunner } from "./quant-module-runner";
 import { WatchlistModuleRunner } from "./watchlist-module-runner";
-import type { ModuleId, NarrativeModuleId } from "@/types";
+import type { AnalysisRunMode, ModuleId, NarrativeModuleId } from "@/types";
 
 interface ModuleRunnerProps {
   moduleId: ModuleId;
@@ -30,13 +30,14 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
     hasRequiredApiKey,
     setApiKeyError,
   } = useModel();
-  const { registerOnRun, setIsLoading, setShowRefreshCta } = useAnalysis();
+  const { registerOnRun, setIsLoading, setRunButtonState } = useAnalysis();
   const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
   const effectiveExpertMode = expertAvailable && expertEnabled;
   const prevModuleIdRef = useRef(moduleId);
   const prevLangRef = useRef(lang);
   const prevModelIdRef = useRef(modelId);
   const prevExpertModeRef = useRef(effectiveExpertMode);
+
   const buildRunKey = useCallback(
     (expertMode: boolean) =>
       getNarrativeRunKey({
@@ -47,45 +48,45 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
       }),
     [moduleId, lang, modelId]
   );
-  const [activeRunKey, setActiveRunKey] = useState(() =>
-    buildRunKey(effectiveExpertMode)
-  );
-  const [runState, setRunState] = useState(() =>
-    getNarrativeRunState(buildRunKey(effectiveExpertMode))
-  );
-  const showScan = !runState.completion && !runState.error;
-  const hasAnalysis = Boolean(runState.completion);
 
-  const runCurrentNarrative = useCallback(() => {
-    void runNarrativeAnalysis({
+  const desiredRunKey = useMemo(
+    () => buildRunKey(effectiveExpertMode),
+    [buildRunKey, effectiveExpertMode]
+  );
+
+  const [activeRunKey, setActiveRunKey] = useState(desiredRunKey);
+  const [runState, setRunState] = useState(() => getNarrativeRunState(desiredRunKey));
+  const [desiredState, setDesiredState] = useState(() =>
+    getNarrativeRunState(desiredRunKey)
+  );
+
+  const runCurrentNarrative = useCallback(
+    (mode: AnalysisRunMode) => {
+      void runNarrativeAnalysis({
+        moduleId,
+        language: lang,
+        modelId,
+        providerApiKey: getProviderApiKeyForModel(modelId),
+        expertMode: effectiveExpertMode,
+        mode,
+      });
+    },
+    [
       moduleId,
-      language: lang,
+      lang,
       modelId,
-      providerApiKey: getProviderApiKeyForModel(modelId),
-      expertMode: effectiveExpertMode,
-    });
-  }, [
-    moduleId,
-    lang,
-    modelId,
-    getProviderApiKeyForModel,
-    effectiveExpertMode,
-  ]);
+      getProviderApiKeyForModel,
+      effectiveExpertMode,
+    ]
+  );
 
   const handleRun = useCallback(() => {
-    const runKey = buildRunKey(effectiveExpertMode);
-    setActiveRunKey(runKey);
-    setRunState(getNarrativeRunState(runKey));
-    setShowRefreshCta(false);
+    const mode: AnalysisRunMode = desiredState.completion ? "refresh" : "auto";
+    setActiveRunKey(desiredRunKey);
+    setRunState(getNarrativeRunState(desiredRunKey));
     setApiKeyError(null);
-    runCurrentNarrative();
-  }, [
-    buildRunKey,
-    effectiveExpertMode,
-    runCurrentNarrative,
-    setApiKeyError,
-    setShowRefreshCta,
-  ]);
+    runCurrentNarrative(mode);
+  }, [desiredRunKey, desiredState.completion, runCurrentNarrative, setApiKeyError]);
 
   useEffect(() => {
     registerOnRun(handleRun, { requiresModelCredentials: true });
@@ -97,10 +98,28 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
   }, [activeRunKey]);
 
   useEffect(() => {
+    return subscribeNarrativeRun(desiredRunKey, setDesiredState);
+  }, [desiredRunKey]);
+
+  useEffect(() => {
+    if (desiredState.cache || desiredState.isLoading || desiredState.error) return;
+    if (!hasRequiredApiKey(modelId)) return;
+    runCurrentNarrative("cache_only");
+  }, [
+    desiredState.cache,
+    desiredState.error,
+    desiredState.isLoading,
+    hasRequiredApiKey,
+    modelId,
+    runCurrentNarrative,
+  ]);
+
+  useEffect(() => {
     const moduleChanged = prevModuleIdRef.current !== moduleId;
     const langChanged = prevLangRef.current !== lang;
     const modelChanged = prevModelIdRef.current !== modelId;
     const expertChanged = prevExpertModeRef.current !== effectiveExpertMode;
+    const hasAnalysis = Boolean(runState.completion);
 
     const shouldPreserveCurrentOutput =
       hasAnalysis &&
@@ -108,23 +127,21 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
       !langChanged &&
       (modelChanged || expertChanged);
 
-    if (shouldPreserveCurrentOutput) {
-      return;
-    }
+    if (shouldPreserveCurrentOutput) return;
 
-    const nextKey = buildRunKey(effectiveExpertMode);
     const timer = window.setTimeout(() => {
-      setActiveRunKey(nextKey);
-      setRunState(getNarrativeRunState(nextKey));
+      setActiveRunKey(desiredRunKey);
+      setRunState(getNarrativeRunState(desiredRunKey));
     }, 0);
+
     return () => window.clearTimeout(timer);
   }, [
-    buildRunKey,
+    desiredRunKey,
     effectiveExpertMode,
-    hasAnalysis,
     lang,
     modelId,
     moduleId,
+    runState.completion,
   ]);
 
   useEffect(() => {
@@ -139,22 +156,29 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
   }, [runState.error, setApiKeyError]);
 
   useEffect(() => {
+    if (activeRunKey !== desiredRunKey) return;
     if (runState.completion || runState.isLoading || runState.error) return;
     if (!hasRequiredApiKey(modelId)) return;
-    runCurrentNarrative();
+    runCurrentNarrative("auto");
   }, [
+    activeRunKey,
+    desiredRunKey,
     hasRequiredApiKey,
     modelId,
     runCurrentNarrative,
     runState.completion,
-    runState.isLoading,
     runState.error,
+    runState.isLoading,
   ]);
 
   useEffect(() => {
-    const desiredKey = buildRunKey(effectiveExpertMode);
-    setShowRefreshCta(hasAnalysis && desiredKey !== activeRunKey);
-  }, [activeRunKey, buildRunKey, effectiveExpertMode, hasAnalysis, setShowRefreshCta]);
+    setRunButtonState({
+      hasResult: Boolean(desiredState.completion),
+      refreshEligibleAt: desiredState.cache?.refreshEligibleAt ?? null,
+      secondsUntilRefresh: desiredState.cache?.secondsUntilRefresh ?? 0,
+      cacheEnabled: desiredState.cache?.cacheEnabled ?? true,
+    });
+  }, [desiredState.cache, desiredState.completion, setRunButtonState]);
 
   useEffect(() => {
     prevModuleIdRef.current = moduleId;
@@ -162,6 +186,8 @@ function NarrativeModuleRunner({ moduleId }: { moduleId: NarrativeModuleId }) {
     prevModelIdRef.current = modelId;
     prevExpertModeRef.current = effectiveExpertMode;
   }, [effectiveExpertMode, lang, modelId, moduleId]);
+
+  const showScan = !runState.completion && !runState.error;
 
   return (
     <div className="flex flex-col h-full">

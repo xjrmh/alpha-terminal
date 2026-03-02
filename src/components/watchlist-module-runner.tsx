@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useAnalysis } from "@/lib/analysis/context";
 import {
@@ -9,8 +9,10 @@ import {
   runWatchlistScan,
   subscribeWatchlistRun,
 } from "@/lib/analysis/watchlist-runner";
+import { useModel } from "@/lib/model/context";
+import { useExpertMode } from "@/lib/expert/context";
 import { SkeletonLoader } from "./skeleton-loader";
-import type { WatchlistTimeRange } from "@/types";
+import type { AnalysisRunMode, WatchlistTimeRange } from "@/types";
 
 const TIME_RANGES: WatchlistTimeRange[] = ["1D", "1W", "1M"];
 
@@ -35,16 +37,39 @@ function formatScore(value: number): string {
 
 export function WatchlistModuleRunner() {
   const { t } = useLanguage();
-  const { registerOnRun, setIsLoading, setShowRefreshCta } = useAnalysis();
+  const { registerOnRun, setIsLoading, setRunButtonState } = useAnalysis();
+  const { modelId } = useModel();
+  const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
+  const expertMode = expertAvailable && expertEnabled;
+  const prevTimeRangeRef = useRef<WatchlistTimeRange>("1D");
   const [timeRange, setTimeRange] = useState<WatchlistTimeRange>("1D");
 
-  const runKey = useMemo(() => getWatchlistRunKey(timeRange), [timeRange]);
-  const [runState, setRunState] = useState(() => getWatchlistRunState(runKey));
+  const desiredRunKey = useMemo(
+    () =>
+      getWatchlistRunKey({
+        timeRange,
+        modelId,
+        expertMode,
+      }),
+    [expertMode, modelId, timeRange]
+  );
+  const [activeRunKey, setActiveRunKey] = useState(desiredRunKey);
+  const [runState, setRunState] = useState(() => getWatchlistRunState(desiredRunKey));
+  const [desiredState, setDesiredState] = useState(() =>
+    getWatchlistRunState(desiredRunKey)
+  );
 
   const handleRun = useCallback(() => {
-    setShowRefreshCta(false);
-    void runWatchlistScan({ timeRange });
-  }, [setShowRefreshCta, timeRange]);
+    const mode: AnalysisRunMode = desiredState.result ? "refresh" : "auto";
+    setActiveRunKey(desiredRunKey);
+    setRunState(getWatchlistRunState(desiredRunKey));
+    void runWatchlistScan({
+      timeRange,
+      modelId,
+      expertMode,
+      mode,
+    });
+  }, [desiredRunKey, desiredState.result, expertMode, modelId, timeRange]);
 
   useEffect(() => {
     registerOnRun(handleRun, { requiresModelCredentials: false });
@@ -52,21 +77,80 @@ export function WatchlistModuleRunner() {
   }, [handleRun, registerOnRun]);
 
   useEffect(() => {
-    return subscribeWatchlistRun(runKey, setRunState);
-  }, [runKey]);
+    return subscribeWatchlistRun(activeRunKey, setRunState);
+  }, [activeRunKey]);
+
+  useEffect(() => {
+    return subscribeWatchlistRun(desiredRunKey, setDesiredState);
+  }, [desiredRunKey]);
 
   useEffect(() => {
     setIsLoading(runState.isLoading);
   }, [runState.isLoading, setIsLoading]);
 
   useEffect(() => {
-    setShowRefreshCta(false);
-  }, [setShowRefreshCta, timeRange]);
+    if (desiredState.cache || desiredState.isLoading || desiredState.error) return;
+    void runWatchlistScan({
+      timeRange,
+      modelId,
+      expertMode,
+      mode: "cache_only",
+    });
+  }, [
+    desiredState.cache,
+    desiredState.error,
+    desiredState.isLoading,
+    expertMode,
+    modelId,
+    timeRange,
+  ]);
 
   useEffect(() => {
+    const timeRangeChanged = prevTimeRangeRef.current !== timeRange;
+    const hasAnalysis = Boolean(runState.result);
+    if (hasAnalysis && activeRunKey !== desiredRunKey && !timeRangeChanged) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActiveRunKey(desiredRunKey);
+      setRunState(getWatchlistRunState(desiredRunKey));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeRunKey, desiredRunKey, runState.result, timeRange]);
+
+  useEffect(() => {
+    if (activeRunKey !== desiredRunKey) return;
     if (runState.result || runState.isLoading || runState.error) return;
-    void runWatchlistScan({ timeRange });
-  }, [runState.error, runState.isLoading, runState.result, timeRange]);
+    void runWatchlistScan({
+      timeRange,
+      modelId,
+      expertMode,
+      mode: "auto",
+    });
+  }, [
+    activeRunKey,
+    desiredRunKey,
+    expertMode,
+    modelId,
+    runState.error,
+    runState.isLoading,
+    runState.result,
+    timeRange,
+  ]);
+
+  useEffect(() => {
+    setRunButtonState({
+      hasResult: Boolean(desiredState.result),
+      refreshEligibleAt: desiredState.cache?.refreshEligibleAt ?? null,
+      secondsUntilRefresh: desiredState.cache?.secondsUntilRefresh ?? 0,
+      cacheEnabled: desiredState.cache?.cacheEnabled ?? true,
+    });
+  }, [desiredState.cache, desiredState.result, setRunButtonState]);
+
+  useEffect(() => {
+    prevTimeRangeRef.current = timeRange;
+  }, [timeRange]);
 
   const result = runState.result;
   const showScan = !result && !runState.error;

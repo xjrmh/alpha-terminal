@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useAnalysis } from "@/lib/analysis/context";
 import {
@@ -13,6 +13,7 @@ import { useExpertMode } from "@/lib/expert/context";
 import { useModel } from "@/lib/model/context";
 import { useQuantSettings } from "@/lib/quant/settings-context";
 import type {
+  AnalysisRunMode,
   QuantStrategyConfig,
   QuantStrategyId,
 } from "@/types";
@@ -49,41 +50,68 @@ function configRows(config: QuantStrategyConfig): Array<[string, string]> {
 
 export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
   const { lang, t } = useLanguage();
-  const { registerOnRun, setIsLoading, setShowRefreshCta } = useAnalysis();
+  const { registerOnRun, setIsLoading, setRunButtonState } = useAnalysis();
   const { modelId } = useModel();
   const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
   const { hydrated, getConfig, setConfig, resetConfig } = useQuantSettings();
   const effectiveExpertMode = expertAvailable && expertEnabled;
-  const prevModelIdRef = useRef(modelId);
-  const prevExpertModeRef = useRef(effectiveExpertMode);
-  const needsRefreshRef = useRef(false);
+  const prevStrategyIdRef = useRef(strategyId);
 
   const [overlayBase, setOverlayBase] = useState<
     Exclude<QuantStrategyId, "quant-volatility-target-overlay">
   >("quant-dual-momentum");
-  const runKey = getQuantRunKey(strategyId);
-  const [runState, setRunState] = useState(() => getQuantRunState(runKey));
   const config = getConfig(strategyId);
+  const overlayBaseStrategyId =
+    strategyId === "quant-volatility-target-overlay" ? overlayBase : undefined;
+
+  const desiredRunKey = useMemo(
+    () =>
+      getQuantRunKey({
+        strategyId,
+        language: lang,
+        modelId,
+        config,
+        expertMode: effectiveExpertMode,
+        overlayBaseStrategyId,
+      }),
+    [
+      config,
+      effectiveExpertMode,
+      lang,
+      modelId,
+      overlayBaseStrategyId,
+      strategyId,
+    ]
+  );
+  const [activeRunKey, setActiveRunKey] = useState(desiredRunKey);
+  const [runState, setRunState] = useState(() => getQuantRunState(desiredRunKey));
+  const [desiredState, setDesiredState] = useState(() =>
+    getQuantRunState(desiredRunKey)
+  );
 
   const handleRun = useCallback(() => {
+    const mode: AnalysisRunMode =
+      desiredState.signal || desiredState.backtest ? "refresh" : "auto";
+    setActiveRunKey(desiredRunKey);
+    setRunState(getQuantRunState(desiredRunKey));
     void runQuantAnalysis({
       strategyId,
       language: lang,
+      modelId,
       config,
       expertMode: effectiveExpertMode,
-      overlayBaseStrategyId:
-        strategyId === "quant-volatility-target-overlay"
-          ? overlayBase
-          : undefined,
+      overlayBaseStrategyId,
+      mode,
     });
-    needsRefreshRef.current = false;
-    setShowRefreshCta(false);
   }, [
+    desiredRunKey,
+    desiredState.backtest,
+    desiredState.signal,
     config,
     effectiveExpertMode,
     lang,
-    overlayBase,
-    setShowRefreshCta,
+    modelId,
+    overlayBaseStrategyId,
     strategyId,
   ]);
 
@@ -93,38 +121,106 @@ export function QuantModuleRunner({ strategyId }: QuantModuleRunnerProps) {
   }, [handleRun, registerOnRun]);
 
   useEffect(() => {
-    return subscribeQuantRun(runKey, setRunState);
-  }, [runKey]);
+    return subscribeQuantRun(activeRunKey, setRunState);
+  }, [activeRunKey]);
+
+  useEffect(() => {
+    return subscribeQuantRun(desiredRunKey, setDesiredState);
+  }, [desiredRunKey]);
+
+  useEffect(() => {
+    if (desiredState.cache || desiredState.isLoading || desiredState.error) return;
+    void runQuantAnalysis({
+      strategyId,
+      language: lang,
+      modelId,
+      config,
+      expertMode: effectiveExpertMode,
+      overlayBaseStrategyId,
+      mode: "cache_only",
+    });
+  }, [
+    config,
+    desiredState.cache,
+    desiredState.error,
+    desiredState.isLoading,
+    effectiveExpertMode,
+    lang,
+    modelId,
+    overlayBaseStrategyId,
+    strategyId,
+  ]);
 
   useEffect(() => {
     setIsLoading(runState.isLoading);
   }, [runState.isLoading, setIsLoading]);
 
+  useEffect(() => {
+    const strategyChanged = prevStrategyIdRef.current !== strategyId;
+    const hasAnalysis = Boolean(runState.signal || runState.backtest);
+    if (!strategyChanged && hasAnalysis && activeRunKey !== desiredRunKey) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActiveRunKey(desiredRunKey);
+      setRunState(getQuantRunState(desiredRunKey));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    activeRunKey,
+    desiredRunKey,
+    runState.backtest,
+    runState.signal,
+    strategyId,
+  ]);
+
+  useEffect(() => {
+    if (activeRunKey !== desiredRunKey) return;
+    if (runState.signal || runState.backtest || runState.isLoading || runState.error) {
+      return;
+    }
+    void runQuantAnalysis({
+      strategyId,
+      language: lang,
+      modelId,
+      config,
+      expertMode: effectiveExpertMode,
+      overlayBaseStrategyId,
+      mode: "auto",
+    });
+  }, [
+    activeRunKey,
+    config,
+    desiredRunKey,
+    effectiveExpertMode,
+    lang,
+    modelId,
+    overlayBaseStrategyId,
+    runState.backtest,
+    runState.error,
+    runState.isLoading,
+    runState.signal,
+    strategyId,
+  ]);
+
+  useEffect(() => {
+    setRunButtonState({
+      hasResult: Boolean(desiredState.signal || desiredState.backtest),
+      refreshEligibleAt: desiredState.cache?.refreshEligibleAt ?? null,
+      secondsUntilRefresh: desiredState.cache?.secondsUntilRefresh ?? 0,
+      cacheEnabled: desiredState.cache?.cacheEnabled ?? true,
+    });
+  }, [desiredState.backtest, desiredState.cache, desiredState.signal, setRunButtonState]);
+
   const advancedVisible = effectiveExpertMode;
   const signal = runState.signal;
   const backtest = runState.backtest;
   const showScan = !signal && !backtest && !runState.error;
-  const hasAnalysis = Boolean(signal || backtest);
 
   useEffect(() => {
-    if (!hasAnalysis) {
-      needsRefreshRef.current = false;
-      setShowRefreshCta(false);
-      return;
-    }
-
-    const modelChanged = prevModelIdRef.current !== modelId;
-    const expertChanged = prevExpertModeRef.current !== effectiveExpertMode;
-    if (modelChanged || expertChanged) {
-      needsRefreshRef.current = true;
-    }
-    setShowRefreshCta(needsRefreshRef.current);
-  }, [effectiveExpertMode, hasAnalysis, modelId, setShowRefreshCta]);
-
-  useEffect(() => {
-    prevModelIdRef.current = modelId;
-    prevExpertModeRef.current = effectiveExpertMode;
-  }, [effectiveExpertMode, modelId]);
+    prevStrategyIdRef.current = strategyId;
+  }, [strategyId]);
 
   return (
     <div className="relative flex flex-col h-full overflow-y-auto p-6 gap-4">

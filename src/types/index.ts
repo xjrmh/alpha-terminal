@@ -24,6 +24,29 @@ export type ModuleId = NarrativeModuleId | QuantStrategyId | WatchlistModuleId;
 
 export type ModuleKind = "narrative" | "quant" | "watchlist";
 
+export type AnalysisRunMode =
+  | "auto"
+  | "refresh"
+  | "refresh_if_eligible"
+  | "cache_only";
+
+export type AnalysisCacheSource = "fresh" | "cache" | "missing";
+
+export interface AnalysisCacheMeta {
+  source: AnalysisCacheSource;
+  updatedAt: string | null;
+  refreshEligibleAt: string | null;
+  canRefresh: boolean;
+  secondsUntilRefresh: number;
+  cacheEnabled: boolean;
+}
+
+export interface CacheRefreshLockedErrorPayload {
+  code: "CACHE_REFRESH_LOCKED";
+  error: string;
+  cache: AnalysisCacheMeta;
+}
+
 export interface ModuleInfo {
   id: ModuleId;
   slug: string;
@@ -38,6 +61,12 @@ export interface AnalyzeRequest {
   modelId: string;
   providerApiKey?: string;
   expertMode?: boolean;
+  mode?: AnalysisRunMode;
+}
+
+export interface AnalyzeResponse {
+  completion: string;
+  cache: AnalysisCacheMeta;
 }
 
 export type WatchlistTimeRange = "1D" | "1W" | "1M";
@@ -46,6 +75,9 @@ export interface WatchlistScanRequest {
   timeRange: WatchlistTimeRange;
   asOfDate?: string;
   limit?: number;
+  modelId?: string;
+  expertMode?: boolean;
+  mode?: AnalysisRunMode;
 }
 
 export interface WatchlistItem {
@@ -80,6 +112,11 @@ export interface WatchlistScanResponse {
     };
   };
   sources: string[];
+}
+
+export interface WatchlistRunResponse {
+  result: WatchlistScanResponse | null;
+  cache: AnalysisCacheMeta;
 }
 
 export type LookbackMode = "fixed_years" | "since_inception";
@@ -128,6 +165,8 @@ export interface QuantSignalRequest {
     QuantStrategyId,
     "quant-volatility-target-overlay"
   >;
+  modelId?: string;
+  mode?: AnalysisRunMode;
 }
 
 export interface QuantSignalResponse {
@@ -163,6 +202,8 @@ export interface QuantBacktestRequest {
     QuantStrategyId,
     "quant-volatility-target-overlay"
   >;
+  modelId?: string;
+  mode?: AnalysisRunMode;
 }
 
 export interface QuantBacktestResponse {
@@ -186,4 +227,27 @@ export interface QuantBacktestResponse {
     requestedCostBps: number;
   };
   sources: string[];
+}
+
+export interface QuantRunRequest {
+  strategyId: QuantStrategyId;
+  language: Language;
+  modelId: string;
+  mode?: AnalysisRunMode;
+  asOfDate?: string;
+  startDate?: string;
+  endDate?: string;
+  costBps?: number;
+  expertMode?: boolean;
+  config?: Partial<QuantStrategyConfig>;
+  overlayBaseStrategyId?: Exclude<
+    QuantStrategyId,
+    "quant-volatility-target-overlay"
+  >;
+}
+
+export interface QuantRunResponse {
+  signal: QuantSignalResponse | null;
+  backtest: QuantBacktestResponse | null;
+  cache: AnalysisCacheMeta;
 }

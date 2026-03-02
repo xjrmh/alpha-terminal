@@ -2,6 +2,20 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
+export interface AnalysisRunButtonState {
+  hasResult: boolean;
+  refreshEligibleAt: string | null;
+  secondsUntilRefresh: number;
+  cacheEnabled: boolean;
+}
+
+const DEFAULT_RUN_BUTTON_STATE: AnalysisRunButtonState = {
+  hasResult: false,
+  refreshEligibleAt: null,
+  secondsUntilRefresh: 0,
+  cacheEnabled: true,
+};
+
 interface AnalysisContextType {
   onRun: (() => void) | null;
   registerOnRun: (
@@ -11,8 +25,8 @@ interface AnalysisContextType {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   requiresModelCredentials: boolean;
-  showRefreshCta: boolean;
-  setShowRefreshCta: (show: boolean) => void;
+  runButtonState: AnalysisRunButtonState;
+  setRunButtonState: (state: AnalysisRunButtonState) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | null>(null);
@@ -21,7 +35,9 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [onRun, setOnRun] = useState<(() => void) | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [requiresModelCredentials, setRequiresModelCredentials] = useState(true);
-  const [showRefreshCta, setShowRefreshCta] = useState(false);
+  const [runButtonState, setRunButtonState] = useState<AnalysisRunButtonState>(
+    DEFAULT_RUN_BUTTON_STATE
+  );
 
   const registerOnRun = useCallback(
     (
@@ -31,7 +47,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       setOnRun(() => fn);
       setRequiresModelCredentials(options?.requiresModelCredentials ?? true);
       if (!fn) {
-        setShowRefreshCta(false);
+        setRunButtonState(DEFAULT_RUN_BUTTON_STATE);
       }
     },
     []
@@ -45,8 +61,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         isLoading,
         setIsLoading,
         requiresModelCredentials,
-        showRefreshCta,
-        setShowRefreshCta,
+        runButtonState,
+        setRunButtonState,
       }}
     >
       {children}

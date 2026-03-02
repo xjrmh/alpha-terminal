@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import { useModel } from "@/lib/model/context";
 import { useExpertMode } from "@/lib/expert/context";
+import { useQuantSettings } from "@/lib/quant/settings-context";
 import { subscribeModuleStatus, type ModuleStatus } from "@/lib/analysis/run-all";
 
 export function useModuleStatus(): ModuleStatus {
   const { lang } = useLanguage();
   const { modelId } = useModel();
   const { available, enabled } = useExpertMode();
+  const { getConfig } = useQuantSettings();
   const expertMode = available && enabled;
   const [status, setStatus] = useState<ModuleStatus>({
     completedIds: new Set(),
@@ -30,8 +32,8 @@ export function useModuleStatus(): ModuleStatus {
   }, []);
 
   useEffect(() => {
-    return subscribeModuleStatus(lang, modelId, expertMode, handleUpdate);
-  }, [lang, modelId, expertMode, handleUpdate]);
+    return subscribeModuleStatus(lang, modelId, expertMode, getConfig, handleUpdate);
+  }, [lang, modelId, expertMode, getConfig, handleUpdate]);
 
   return status;
 }

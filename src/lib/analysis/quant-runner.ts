@@ -1,11 +1,14 @@
+import { buildQuantCacheKey } from "@/lib/analysis/cache-keys";
 import type { Language } from "@/lib/i18n/types";
 import type {
+  AnalysisCacheMeta,
+  AnalysisRunMode,
   QuantBacktestResponse,
+  QuantRunResponse,
   QuantSignalResponse,
   QuantStrategyConfig,
   QuantStrategyId,
 } from "@/types";
-import { isCacheExpired } from "./cache-expiry";
 
 interface QuantRunState {
   signal: QuantSignalResponse | null;
@@ -13,18 +16,13 @@ interface QuantRunState {
   error: string | null;
   isLoading: boolean;
   updatedAt: string | null;
+  cache: AnalysisCacheMeta | null;
 }
 
-interface QuantCacheRecord {
-  version: number;
-  signal: QuantSignalResponse | null;
-  backtest: QuantBacktestResponse | null;
-  updatedAt: string;
-}
-
-interface RunQuantParams {
+interface RunQuantKeyParams {
   strategyId: QuantStrategyId;
   language: Language;
+  modelId: string;
   config: QuantStrategyConfig;
   expertMode: boolean;
   overlayBaseStrategyId?: Exclude<
@@ -33,19 +31,22 @@ interface RunQuantParams {
   >;
 }
 
-type QuantListener = (state: QuantRunState) => void;
+interface RunQuantParams extends RunQuantKeyParams {
+  mode?: AnalysisRunMode;
+}
 
-const STORAGE_PREFIX = "alpha-terminal:quant-output:";
-const CACHE_VERSION = 1;
+interface ErrorPayload {
+  error?: string;
+  code?: string;
+  cache?: AnalysisCacheMeta;
+}
+
+type QuantListener = (state: QuantRunState) => void;
 
 const stateByKey = new Map<string, QuantRunState>();
 const listenersByKey = new Map<string, Set<QuantListener>>();
 const controllerByKey = new Map<string, AbortController>();
 const runTokenByKey = new Map<string, number>();
-
-function storageKey(key: string): string {
-  return `${STORAGE_PREFIX}${key}`;
-}
 
 function defaultState(): QuantRunState {
   return {
@@ -54,11 +55,19 @@ function defaultState(): QuantRunState {
     error: null,
     isLoading: false,
     updatedAt: null,
+    cache: null,
   };
 }
 
-function safeNowIso(): string {
-  return new Date().toISOString();
+async function readErrorPayload(res: Response): Promise<ErrorPayload> {
+  const text = await res.text();
+  if (!text) return { error: `HTTP ${res.status}` };
+
+  try {
+    return JSON.parse(text) as ErrorPayload;
+  } catch {
+    return { error: text };
+  }
 }
 
 function getRunToken(key: string): number {
@@ -71,52 +80,13 @@ function nextRunToken(key: string): number {
   return token;
 }
 
-function loadCachedState(key: string): QuantRunState {
-  if (typeof window === "undefined") return defaultState();
-
-  const raw = localStorage.getItem(storageKey(key));
-  if (!raw) return defaultState();
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<QuantCacheRecord>;
-    if (parsed.version !== CACHE_VERSION) return defaultState();
-    const updatedAt =
-      typeof parsed.updatedAt === "string" ? parsed.updatedAt : null;
-    if (isCacheExpired(updatedAt)) return defaultState();
-
-    return {
-      signal: (parsed.signal as QuantSignalResponse) ?? null,
-      backtest: (parsed.backtest as QuantBacktestResponse) ?? null,
-      error: null,
-      isLoading: false,
-      updatedAt,
-    };
-  } catch {
-    return defaultState();
-  }
-}
-
-function persistState(key: string, state: QuantRunState) {
-  if (typeof window === "undefined") return;
-  if (!state.signal || !state.backtest) return;
-
-  const payload: QuantCacheRecord = {
-    version: CACHE_VERSION,
-    signal: state.signal,
-    backtest: state.backtest,
-    updatedAt: state.updatedAt ?? safeNowIso(),
-  };
-
-  localStorage.setItem(storageKey(key), JSON.stringify(payload));
-}
-
 function ensureState(key: string): QuantRunState {
   const existing = stateByKey.get(key);
   if (existing) return existing;
 
-  const loaded = loadCachedState(key);
-  stateByKey.set(key, loaded);
-  return loaded;
+  const fresh = defaultState();
+  stateByKey.set(key, fresh);
+  return fresh;
 }
 
 function notify(key: string) {
@@ -140,15 +110,18 @@ function setState(
   return next;
 }
 
-export function getQuantRunKey(strategyId: QuantStrategyId): string {
-  return strategyId;
+export function getQuantRunKey(params: RunQuantKeyParams): string {
+  return buildQuantCacheKey(params);
 }
 
 export function getQuantRunState(key: string): QuantRunState {
   return ensureState(key);
 }
 
-export function subscribeQuantRun(key: string, listener: QuantListener): () => void {
+export function subscribeQuantRun(
+  key: string,
+  listener: QuantListener
+): () => void {
   const listeners = listenersByKey.get(key) ?? new Set<QuantListener>();
   listeners.add(listener);
   listenersByKey.set(key, listeners);
@@ -166,72 +139,56 @@ export function subscribeQuantRun(key: string, listener: QuantListener): () => v
 }
 
 export async function runQuantAnalysis(params: RunQuantParams): Promise<void> {
-  const key = getQuantRunKey(params.strategyId);
+  const key = getQuantRunKey(params);
   const token = nextRunToken(key);
+  const mode = params.mode ?? "auto";
 
   controllerByKey.get(key)?.abort();
   const controller = new AbortController();
   controllerByKey.set(key, controller);
 
-  setState(key, (prev) => ({
-    ...prev,
-    error: null,
-    isLoading: true,
-    updatedAt: safeNowIso(),
-  }));
+  if (mode !== "cache_only") {
+    setState(key, (prev) => ({
+      ...prev,
+      error: null,
+      isLoading: true,
+    }));
+  }
 
   try {
-    const signalReq = fetch("/api/quant/signal", {
+    const res = await fetch("/api/quant/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
-      body: JSON.stringify({
-        strategyId: params.strategyId,
-        language: params.language,
-        config: params.config,
-        expertMode: params.expertMode,
-        overlayBaseStrategyId: params.overlayBaseStrategyId,
-      }),
+      body: JSON.stringify(params),
     });
 
-    const backtestReq = fetch("/api/quant/backtest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        strategyId: params.strategyId,
-        config: params.config,
-        expertMode: params.expertMode,
-        overlayBaseStrategyId: params.overlayBaseStrategyId,
-      }),
-    });
-
-    const [signalRes, backtestRes] = await Promise.all([signalReq, backtestReq]);
-
-    if (!signalRes.ok) {
-      const text = await signalRes.text();
-      throw new Error(text || `Signal HTTP ${signalRes.status}`);
-    }
-
-    if (!backtestRes.ok) {
-      const text = await backtestRes.text();
-      throw new Error(text || `Backtest HTTP ${backtestRes.status}`);
+    if (!res.ok) {
+      const payload = await readErrorPayload(res);
+      if (payload.code === "CACHE_REFRESH_LOCKED" && payload.cache) {
+        setState(key, (prev) => ({
+          ...prev,
+          error: null,
+          isLoading: false,
+          cache: payload.cache ?? prev.cache,
+          updatedAt: payload.cache?.updatedAt ?? prev.updatedAt,
+        }));
+        return;
+      }
+      throw new Error(payload.error || `HTTP ${res.status}`);
     }
 
     if (getRunToken(key) !== token) return;
+    const payload = (await res.json()) as QuantRunResponse;
 
-    const signalPayload = (await signalRes.json()) as QuantSignalResponse;
-    const backtestPayload = (await backtestRes.json()) as QuantBacktestResponse;
-
-    const finalState = setState(key, {
-      signal: signalPayload,
-      backtest: backtestPayload,
+    setState(key, {
+      signal: payload.signal,
+      backtest: payload.backtest,
       error: null,
       isLoading: false,
-      updatedAt: safeNowIso(),
+      updatedAt: payload.cache.updatedAt,
+      cache: payload.cache,
     });
-
-    persistState(key, finalState);
   } catch (error: unknown) {
     if (getRunToken(key) !== token) return;
 
@@ -245,7 +202,6 @@ export async function runQuantAnalysis(params: RunQuantParams): Promise<void> {
       ...prev,
       error: message,
       isLoading: false,
-      updatedAt: safeNowIso(),
     }));
   } finally {
     const current = controllerByKey.get(key);

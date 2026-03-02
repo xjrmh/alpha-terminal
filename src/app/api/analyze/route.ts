@@ -1,41 +1,73 @@
-import { streamText } from "ai";
+import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { getSystemPrompt } from "@/lib/prompts";
-import type { AnalyzeRequest } from "@/types";
+import type { AnalyzeRequest, AnalyzeResponse } from "@/types";
 import { webSearchPreview } from "@ai-sdk/openai/internal";
 import { anthropicTools } from "@ai-sdk/anthropic/internal";
 import { googleTools } from "@ai-sdk/google/internal";
+import { buildNarrativeCacheKey } from "@/lib/analysis/cache-keys";
+import {
+  CacheRefreshLockedError,
+  runWithSharedAnalysisCache,
+} from "@/lib/server/analysis-cache";
 
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const { moduleId, language, modelId, providerApiKey, expertMode } =
+    const { moduleId, language, modelId, providerApiKey, expertMode, mode } =
       (await req.json()) as AnalyzeRequest;
+    const effectiveExpertMode = expertMode ?? false;
 
-    const systemPrompt = getSystemPrompt(moduleId, language, {
-      expertMode: expertMode ?? false,
-    });
-    const model = resolveModel(modelId, providerApiKey);
-
-    const result = streamText({
-      model,
-      system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: `Run the analysis now. Today's date is ${new Date().toISOString().split("T")[0]}.`,
-        },
-      ],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools: getWebSearchTools(modelId) as any,
-      maxOutputTokens: 8192,
+    const cacheKey = buildNarrativeCacheKey({
+      moduleId,
+      language,
+      modelId,
+      expertMode: effectiveExpertMode,
     });
 
-    return result.toTextStreamResponse();
+    const run = await runWithSharedAnalysisCache<string>({
+      cacheKey,
+      mode: mode ?? "auto",
+      execute: async () => {
+        const systemPrompt = getSystemPrompt(moduleId, language, {
+          expertMode: effectiveExpertMode,
+        });
+        const model = resolveModel(modelId, providerApiKey);
+
+        const result = await generateText({
+          model,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: `Run the analysis now. Today's date is ${new Date().toISOString().split("T")[0]}.`,
+            },
+          ],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          tools: getWebSearchTools(modelId) as any,
+          maxOutputTokens: 8192,
+        });
+
+        return result.text;
+      },
+    });
+
+    const response: AnalyzeResponse = {
+      completion: run.payload ?? "",
+      cache: run.cache,
+    };
+    return Response.json(response);
   } catch (error) {
+    if (error instanceof CacheRefreshLockedError) {
+      return Response.json(
+        { code: error.code, error: error.message, cache: error.cache },
+        { status: 409 }
+      );
+    }
+
     const message = getErrorMessage(error);
     const status = isApiAuthErrorMessage(message) ? 401 : 400;
     return Response.json({ error: message }, { status });

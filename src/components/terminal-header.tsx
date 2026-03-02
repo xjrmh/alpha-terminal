@@ -30,16 +30,37 @@ export function TerminalHeader({
     getProviderApiKeyForModel,
     apiKeyError,
   } = useModel();
-  const { onRun, isLoading, requiresModelCredentials, showRefreshCta } = useAnalysis();
+  const { onRun, isLoading, requiresModelCredentials, runButtonState } = useAnalysis();
   const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
   const expertMode = expertAvailable && expertEnabled;
   const { getConfig } = useQuantSettings();
 
   const [runAllState, setRunAllState] = useState(() => getRunAllState());
+  const [tick, setTick] = useState(() => Date.now());
 
   useEffect(() => {
     return subscribeRunAll(setRunAllState);
   }, []);
+
+  useEffect(() => {
+    if (!runButtonState.hasResult) return;
+    if (!runButtonState.cacheEnabled) return;
+    if (!runButtonState.refreshEligibleAt) return;
+
+    const targetMs = new Date(runButtonState.refreshEligibleAt).getTime();
+    if (!Number.isFinite(targetMs)) return;
+    if (targetMs <= Date.now()) return;
+
+    const interval = window.setInterval(() => {
+      setTick(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [
+    runButtonState.cacheEnabled,
+    runButtonState.hasResult,
+    runButtonState.refreshEligibleAt,
+  ]);
 
   const handleRunAll = useCallback(() => {
     void runAll({
@@ -57,6 +78,31 @@ export function TerminalHeader({
 
   const runDisabledByApiKey =
     requiresModelCredentials && !hasRequiredApiKey(modelId);
+
+  const refreshEligibleMs = runButtonState.refreshEligibleAt
+    ? new Date(runButtonState.refreshEligibleAt).getTime()
+    : Number.NaN;
+  const secondsUntilRefresh =
+    runButtonState.hasResult &&
+    runButtonState.cacheEnabled &&
+    Number.isFinite(refreshEligibleMs)
+      ? Math.max(0, Math.ceil((refreshEligibleMs - tick) / 1000))
+      : 0;
+  const refreshLocked = secondsUntilRefresh > 0;
+
+  function formatCountdown(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  const runLabel = isLoading
+    ? t.loading
+    : runButtonState.hasResult
+      ? refreshLocked
+        ? `${t.refreshIn} ${formatCountdown(secondsUntilRefresh)}`
+        : t.refreshAnalysis
+      : t.runAnalysis;
 
   const apiKeyMissing = !hasRequiredApiKey(modelId);
   const currentModuleName = runAllState.currentModuleId
@@ -84,16 +130,14 @@ export function TerminalHeader({
         {onRun ? (
           <>
             <button
-              className={`btn-run ${showRefreshCta ? "btn-run-refresh" : ""}`}
+              className={`btn-run ${
+                runButtonState.hasResult && !refreshLocked ? "btn-run-refresh" : ""
+              }`}
               onClick={onRun}
-              disabled={isLoading || runDisabledByApiKey}
+              disabled={isLoading || runDisabledByApiKey || refreshLocked}
               title={runDisabledByApiKey ? t.modelApiKeyRequired : undefined}
             >
-              {isLoading
-                ? t.loading
-                : showRefreshCta
-                  ? t.refreshAnalysis
-                  : t.runAnalysis}
+              {runLabel}
             </button>
             {!isLoading && runDisabledByApiKey && (
               <span className="text-red-accent text-xs">{t.modelApiKeyRequired}</span>

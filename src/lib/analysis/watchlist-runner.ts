@@ -1,44 +1,44 @@
+import { buildWatchlistCacheKey } from "@/lib/analysis/cache-keys";
 import type {
-  WatchlistScanRequest,
+  AnalysisCacheMeta,
+  AnalysisRunMode,
+  WatchlistRunResponse,
   WatchlistScanResponse,
   WatchlistTimeRange,
 } from "@/types";
-import { isCacheExpired } from "./cache-expiry";
 
 interface WatchlistRunState {
   result: WatchlistScanResponse | null;
   error: string | null;
   isLoading: boolean;
   updatedAt: string | null;
+  cache: AnalysisCacheMeta | null;
 }
 
-interface WatchlistCacheRecord {
-  version: number;
-  result: WatchlistScanResponse;
-  updatedAt: string;
-}
-
-interface RunWatchlistParams extends WatchlistScanRequest {
+interface RunWatchlistKeyParams {
   timeRange: WatchlistTimeRange;
+  asOfDate?: string;
+  limit?: number;
+  modelId: string;
+  expertMode: boolean;
+}
+
+interface RunWatchlistParams extends RunWatchlistKeyParams {
+  mode?: AnalysisRunMode;
+}
+
+interface ErrorPayload {
+  error?: string;
+  code?: string;
+  cache?: AnalysisCacheMeta;
 }
 
 type WatchlistListener = (state: WatchlistRunState) => void;
-
-const STORAGE_PREFIX = "alpha-terminal:watchlist-output:";
-const CACHE_VERSION = 1;
 
 const stateByKey = new Map<string, WatchlistRunState>();
 const listenersByKey = new Map<string, Set<WatchlistListener>>();
 const controllerByKey = new Map<string, AbortController>();
 const runTokenByKey = new Map<string, number>();
-
-function storageKey(key: string): string {
-  return `${STORAGE_PREFIX}${key}`;
-}
-
-function safeNowIso(): string {
-  return new Date().toISOString();
-}
 
 function defaultState(): WatchlistRunState {
   return {
@@ -46,7 +46,19 @@ function defaultState(): WatchlistRunState {
     error: null,
     isLoading: false,
     updatedAt: null,
+    cache: null,
   };
+}
+
+async function readErrorPayload(res: Response): Promise<ErrorPayload> {
+  const text = await res.text();
+  if (!text) return { error: `HTTP ${res.status}` };
+
+  try {
+    return JSON.parse(text) as ErrorPayload;
+  } catch {
+    return { error: text };
+  }
 }
 
 function getRunToken(key: string): number {
@@ -59,50 +71,13 @@ function nextRunToken(key: string): number {
   return token;
 }
 
-function loadCachedState(key: string): WatchlistRunState {
-  if (typeof window === "undefined") return defaultState();
-
-  const raw = localStorage.getItem(storageKey(key));
-  if (!raw) return defaultState();
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<WatchlistCacheRecord>;
-    if (parsed.version !== CACHE_VERSION || !parsed.result) return defaultState();
-    const updatedAt =
-      typeof parsed.updatedAt === "string" ? parsed.updatedAt : null;
-    if (isCacheExpired(updatedAt)) return defaultState();
-
-    return {
-      result: parsed.result as WatchlistScanResponse,
-      error: null,
-      isLoading: false,
-      updatedAt,
-    };
-  } catch {
-    return defaultState();
-  }
-}
-
-function persistState(key: string, state: WatchlistRunState) {
-  if (typeof window === "undefined") return;
-  if (!state.result) return;
-
-  const payload: WatchlistCacheRecord = {
-    version: CACHE_VERSION,
-    result: state.result,
-    updatedAt: state.updatedAt ?? safeNowIso(),
-  };
-
-  localStorage.setItem(storageKey(key), JSON.stringify(payload));
-}
-
 function ensureState(key: string): WatchlistRunState {
   const existing = stateByKey.get(key);
   if (existing) return existing;
 
-  const loaded = loadCachedState(key);
-  stateByKey.set(key, loaded);
-  return loaded;
+  const fresh = defaultState();
+  stateByKey.set(key, fresh);
+  return fresh;
 }
 
 function notify(key: string) {
@@ -128,22 +103,8 @@ function setState(
   return next;
 }
 
-async function readErrorMessage(res: Response): Promise<string> {
-  const text = await res.text();
-  if (!text) return `HTTP ${res.status}`;
-
-  try {
-    const parsed = JSON.parse(text) as { error?: string };
-    if (parsed?.error) return parsed.error;
-  } catch {
-    // Ignore JSON parse errors and return raw payload.
-  }
-
-  return text;
-}
-
-export function getWatchlistRunKey(timeRange: WatchlistTimeRange): string {
-  return timeRange;
+export function getWatchlistRunKey(params: RunWatchlistKeyParams): string {
+  return buildWatchlistCacheKey(params);
 }
 
 export function getWatchlistRunState(key: string): WatchlistRunState {
@@ -173,46 +134,55 @@ export function subscribeWatchlistRun(
 export async function runWatchlistScan(
   params: RunWatchlistParams
 ): Promise<void> {
-  const key = getWatchlistRunKey(params.timeRange);
+  const key = getWatchlistRunKey(params);
   const token = nextRunToken(key);
+  const mode = params.mode ?? "auto";
 
   controllerByKey.get(key)?.abort();
   const controller = new AbortController();
   controllerByKey.set(key, controller);
 
-  setState(key, (prev) => ({
-    ...prev,
-    error: null,
-    isLoading: true,
-    updatedAt: safeNowIso(),
-  }));
+  if (mode !== "cache_only") {
+    setState(key, (prev) => ({
+      ...prev,
+      error: null,
+      isLoading: true,
+    }));
+  }
 
   try {
     const res = await fetch("/api/watchlist/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
-      body: JSON.stringify({
-        timeRange: params.timeRange,
-        asOfDate: params.asOfDate,
-        limit: params.limit,
-      }),
+      body: JSON.stringify(params),
     });
 
     if (!res.ok) {
-      throw new Error(await readErrorMessage(res));
+      const payload = await readErrorPayload(res);
+      if (payload.code === "CACHE_REFRESH_LOCKED" && payload.cache) {
+        setState(key, (prev) => ({
+          ...prev,
+          error: null,
+          isLoading: false,
+          cache: payload.cache ?? prev.cache,
+          updatedAt: payload.cache?.updatedAt ?? prev.updatedAt,
+        }));
+        return;
+      }
+      throw new Error(payload.error || `HTTP ${res.status}`);
     }
 
     if (getRunToken(key) !== token) return;
-    const payload = (await res.json()) as WatchlistScanResponse;
+    const payload = (await res.json()) as WatchlistRunResponse;
 
-    const finalState = setState(key, {
-      result: payload,
+    setState(key, {
+      result: payload.result,
       error: null,
       isLoading: false,
-      updatedAt: safeNowIso(),
+      updatedAt: payload.cache.updatedAt,
+      cache: payload.cache,
     });
-    persistState(key, finalState);
   } catch (error: unknown) {
     if (getRunToken(key) !== token) return;
 
@@ -226,7 +196,6 @@ export async function runWatchlistScan(
       ...prev,
       error: message,
       isLoading: false,
-      updatedAt: safeNowIso(),
     }));
   } finally {
     const current = controllerByKey.get(key);

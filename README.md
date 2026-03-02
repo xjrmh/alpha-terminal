@@ -16,6 +16,8 @@ npm run dev
 - `OPENAI_API_KEY` — required for GPT-4o / GPT-4o Mini
 - `ANTHROPIC_API_KEY` — required for Claude Sonnet / Opus
 - `GOOGLE_AI_API_KEY` — required for Gemini Flash / Pro
+- `KV_REST_API_URL` — Vercel KV REST URL for shared analysis cache
+- `KV_REST_API_TOKEN` — Vercel KV REST token for shared analysis cache
 - `ENABLE_QUANT_MODULES` — server-side quant API switch (`true` by default)
 - `NEXT_PUBLIC_ENABLE_QUANT_MODULES` — show/hide quant modules in UI
 - `NEXT_PUBLIC_ENABLE_EXPERT_MODE` — show/hide Expert Mode toggle in UI
@@ -30,6 +32,16 @@ npm run dev
 - Expert mode with per-strategy settings persistence
 - Streaming AI responses with markdown rendering
 - Multi-model support (OpenAI, Anthropic, Google)
+- Shared online cache for all module outputs (partitioned by model + expert mode)
+- 1-hour rerun cooldown with disabled refresh countdown
+
+## Cache Behavior
+
+- All narrative, watchlist, and quant outputs are cached online when KV is configured.
+- Cached entries are partitioned by module inputs, selected model, and expert mode.
+- Manual refresh is blocked until cached output is at least 1 hour old.
+- During cooldown, the refresh button is disabled and shows a countdown.
+- If KV is not configured or temporarily unavailable, analysis still runs uncached.
 
 ## Modules
 
