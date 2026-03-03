@@ -1,6 +1,6 @@
 import type { AnalysisCacheMeta, AnalysisRunMode } from "@/types";
 
-export const REFRESH_WINDOW_MS = 60 * 60 * 1000;
+export const REFRESH_WINDOW_MS = 3 * 60 * 60 * 1000;
 
 const REFRESH_LOCK_TTL_MS = 2 * 60 * 1000;
 
@@ -25,7 +25,7 @@ export class CacheRefreshLockedError extends Error {
   readonly cache: AnalysisCacheMeta;
 
   constructor(cache: AnalysisCacheMeta) {
-    super("Cached result is newer than 1 hour. Please retry when cooldown ends.");
+    super("Cached result is newer than 3 hours. Please retry when cooldown ends.");
     this.name = "CacheRefreshLockedError";
     this.cache = cache;
   }

@@ -1,11 +1,38 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { MODULES } from "@/lib/modules";
 import { useLanguage } from "@/lib/i18n/context";
+import { useModel } from "@/lib/model/context";
+import { useExpertMode } from "@/lib/expert/context";
+import { useQuantSettings } from "@/lib/quant/settings-context";
+import { runAll, getRunAllState } from "@/lib/analysis/run-all";
 
 export default function Home() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const { modelId, getProviderApiKeyForModel } = useModel();
+  const { available: expertAvailable, enabled: expertEnabled } = useExpertMode();
+  const { getConfig } = useQuantSettings();
+  const autoRunFired = useRef(false);
+
+  useEffect(() => {
+    if (autoRunFired.current) return;
+    if (getRunAllState().isRunning) return;
+    autoRunFired.current = true;
+
+    const timer = setTimeout(() => {
+      runAll({
+        language: lang,
+        modelId,
+        providerApiKey: getProviderApiKeyForModel(modelId),
+        expertMode: expertAvailable && expertEnabled,
+        getQuantConfig: getConfig,
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [lang, modelId, getProviderApiKeyForModel, expertAvailable, expertEnabled, getConfig]);
 
   return (
     <div className="h-full overflow-y-auto p-6">
