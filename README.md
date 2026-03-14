@@ -13,7 +13,7 @@ npm run dev
 
 ## Environment Variables
 
-- `OPENAI_API_KEY` — required for GPT-4o / GPT-4o Mini
+- `OPENAI_API_KEY` — required for OpenAI models such as GPT-5.2 / GPT-5 Mini / GPT-4.1
 - `ANTHROPIC_API_KEY` — required for Claude Sonnet / Opus
 - `GOOGLE_AI_API_KEY` — required for Gemini Flash / Pro
 - `KV_REST_API_URL` — Vercel KV REST URL for shared analysis cache

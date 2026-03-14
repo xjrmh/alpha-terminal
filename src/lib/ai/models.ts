@@ -5,8 +5,9 @@ export interface ModelConfig {
 }
 
 export const MODELS: ModelConfig[] = [
-  { id: "openai:gpt-4o", label: "GPT-4o", provider: "openai" },
-  { id: "openai:gpt-4o-mini", label: "GPT-4o Mini", provider: "openai" },
+  { id: "openai:gpt-5.2", label: "GPT-5.2", provider: "openai" },
+  { id: "openai:gpt-5-mini", label: "GPT-5 Mini", provider: "openai" },
+  { id: "openai:gpt-4.1", label: "GPT-4.1", provider: "openai" },
   {
     id: "anthropic:claude-sonnet-4-20250514",
     label: "Claude Sonnet",
@@ -30,7 +31,7 @@ export const MODELS: ModelConfig[] = [
 ];
 
 export const DEFAULT_MODEL =
-  MODELS.find((model) => model.id === "openai:gpt-4o") ?? MODELS[0];
+  MODELS.find((model) => model.id === "openai:gpt-5.2") ?? MODELS[0];
 
 export type ModelProvider = ModelConfig["provider"];
 export type ExternalModelProvider = Exclude<ModelProvider, "openai">;

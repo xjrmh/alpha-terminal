@@ -46,6 +46,9 @@ interface RunAllParams {
 
 type RunAllListener = (state: RunAllState) => void;
 
+const RUN_ALL_LAUNCH_DELAY_MS = 400;
+const RUN_ALL_MAX_CONCURRENT = 3;
+
 /* ── State ─────────────────────────────────────────────── */
 
 let runAllState: RunAllState = {
@@ -56,7 +59,7 @@ let runAllState: RunAllState = {
   error: null,
 };
 
-let cancelled = false;
+let activeRunToken = 0;
 const listeners = new Set<RunAllListener>();
 
 function notify() {
@@ -85,8 +88,14 @@ export function subscribeRunAll(listener: RunAllListener): () => void {
 }
 
 export function cancelRunAll() {
-  cancelled = true;
+  activeRunToken += 1;
   setState({ isRunning: false, currentModuleId: null, error: null });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function quantOverlayBase(
@@ -145,10 +154,52 @@ export function isModuleReady(
   return false;
 }
 
-/** Run all modules sequentially and defer rerun eligibility to the shared cache mode. */
-export async function runAll(params: RunAllParams): Promise<void> {
+async function runModule(
+  mod: (typeof MODULES)[number],
+  params: RunAllParams
+): Promise<void> {
   const { language, modelId, providerApiKey, expertMode, getQuantConfig } = params;
-  cancelled = false;
+
+  if (mod.kind === "narrative") {
+    await runNarrativeAnalysis({
+      moduleId: mod.id as NarrativeModuleId,
+      language,
+      modelId,
+      providerApiKey,
+      expertMode,
+      mode: "refresh_if_eligible",
+    });
+    return;
+  }
+
+  if (mod.kind === "watchlist") {
+    await runWatchlistScan({
+      timeRange: "1D",
+      modelId,
+      expertMode,
+      mode: "refresh_if_eligible",
+    });
+    return;
+  }
+
+  if (mod.kind === "quant") {
+    const strategyId = mod.id as QuantStrategyId;
+    await runQuantAnalysis({
+      strategyId,
+      language,
+      modelId,
+      config: getQuantConfig(strategyId),
+      expertMode,
+      overlayBaseStrategyId: quantOverlayBase(strategyId),
+      mode: "refresh_if_eligible",
+    });
+  }
+}
+
+/** Run all modules with staggered starts and bounded overlap. */
+export async function runAll(params: RunAllParams): Promise<void> {
+  const runToken = activeRunToken + 1;
+  activeRunToken = runToken;
 
   const narrativeOnly = NARRATIVE_MODULES.filter((m) => m.kind === "narrative");
   const watchlistMod = NARRATIVE_MODULES.find((m) => m.kind === "watchlist");
@@ -164,51 +215,70 @@ export async function runAll(params: RunAllParams): Promise<void> {
   });
 
   let completedCount = 0;
+  let nextIndex = 0;
+  let lastLaunchAt = 0;
+  const inFlight = new Set<Promise<void>>();
 
-  for (const mod of allModules) {
-    if (cancelled) return;
-    setState({ currentModuleId: mod.id as ModuleId });
-
-    try {
-      if (mod.kind === "narrative") {
-        await runNarrativeAnalysis({
-          moduleId: mod.id as NarrativeModuleId,
-          language,
-          modelId,
-          providerApiKey,
-          expertMode,
-          mode: "refresh_if_eligible",
-        });
-      } else if (mod.kind === "watchlist") {
-        await runWatchlistScan({
-          timeRange: "1D",
-          modelId,
-          expertMode,
-          mode: "refresh_if_eligible",
-        });
-      } else if (mod.kind === "quant") {
-        const strategyId = mod.id as QuantStrategyId;
-        await runQuantAnalysis({
-          strategyId,
-          language,
-          modelId,
-          config: getQuantConfig(strategyId),
-          expertMode,
-          overlayBaseStrategyId: quantOverlayBase(strategyId),
-          mode: "refresh_if_eligible",
-        });
-      }
-    } catch (error: unknown) {
-      if (cancelled) return;
-      const message = error instanceof Error ? error.message : "Unknown error";
-      setState({ error: message });
+  const launchNext = async (): Promise<boolean> => {
+    if (runToken !== activeRunToken || nextIndex >= allModules.length) {
+      return false;
     }
 
-    if (cancelled) return;
-    completedCount += 1;
-    setState({ completedCount });
+    const waitMs = Math.max(
+      0,
+      lastLaunchAt + RUN_ALL_LAUNCH_DELAY_MS - Date.now()
+    );
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+
+    if (runToken !== activeRunToken || nextIndex >= allModules.length) {
+      return false;
+    }
+
+    const mod = allModules[nextIndex++];
+    lastLaunchAt = Date.now();
+    setState({ currentModuleId: mod.id as ModuleId });
+
+    const baseTask = runModule(mod, params)
+      .catch((error: unknown) => {
+        if (runToken !== activeRunToken) return;
+        const message = error instanceof Error ? error.message : "Unknown error";
+        setState({ error: message });
+      });
+
+    const task = baseTask.finally(() => {
+      inFlight.delete(task);
+      if (runToken !== activeRunToken) return;
+      completedCount += 1;
+      setState({ completedCount });
+    });
+
+    inFlight.add(task);
+    return true;
+  };
+
+  while (
+    runToken === activeRunToken &&
+    (nextIndex < allModules.length || inFlight.size > 0)
+  ) {
+    while (
+      runToken === activeRunToken &&
+      nextIndex < allModules.length &&
+      inFlight.size < RUN_ALL_MAX_CONCURRENT
+    ) {
+      const launched = await launchNext();
+      if (!launched) break;
+    }
+
+    if (runToken !== activeRunToken || inFlight.size === 0) {
+      break;
+    }
+
+    await Promise.race(inFlight);
   }
 
+  if (runToken !== activeRunToken) return;
   setState({ isRunning: false, currentModuleId: null });
 }
 

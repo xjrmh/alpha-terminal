@@ -70,7 +70,7 @@ function parsePayload(input: unknown): ParsedWatchlistPayload {
     limit = input.limit;
   }
 
-  let modelId = "openai:gpt-4o";
+  let modelId = "openai:gpt-5.2";
   if (typeof input.modelId !== "undefined") {
     if (typeof input.modelId !== "string" || !input.modelId.trim()) {
       throw new Error("Invalid field `modelId`: expected non-empty string.");
